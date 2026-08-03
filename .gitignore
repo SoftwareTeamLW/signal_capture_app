@@ -2,7 +2,7 @@
 /build/
 
 # VS Code 本机配置
-/.vscode/
+#/.vscode/
 
 # Visual Studio 本机生成文件
 /.vs/

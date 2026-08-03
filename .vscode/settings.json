@@ -1,0 +1,13 @@
+{
+    "terminal.integrated.profiles.windows": {
+        "MSVC PowerShell": {
+            "source": "PowerShell",
+            "args": [
+                "-NoExit",
+                "-Command",
+                "Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force; & 'D:\\Visual Studio\\Common7\\Tools\\Launch-VsDevShell.ps1' -Arch amd64 -HostArch amd64"
+            ]
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "MSVC PowerShell"
+}
