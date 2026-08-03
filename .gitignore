@@ -17,3 +17,23 @@
 # Windows 临时文件
 Thumbs.db
 Desktop.ini
+
+# CMake build directories
+/build/
+/build-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+build.ninja
+.ninja_deps
+.ninja_log
+compile_commands.json
+
+# Compiled binaries
+*.exe
+*.dll
+*.lib
+*.obj
+*.pdb
