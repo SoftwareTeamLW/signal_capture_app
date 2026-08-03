@@ -1,0 +1,19 @@
+# CMake / Ninja 编译产物
+/build/
+
+# VS Code 本机配置
+/.vscode/
+
+# Visual Studio 本机生成文件
+/.vs/
+
+# C++ 编译产物
+*.obj
+*.exe
+*.lib
+*.pdb
+*.ilk
+
+# Windows 临时文件
+Thumbs.db
+Desktop.ini
