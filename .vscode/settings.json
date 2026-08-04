@@ -9,5 +9,6 @@
             ]
         }
     },
-    "terminal.integrated.defaultProfile.windows": "MSVC PowerShell"
+    "terminal.integrated.defaultProfile.windows": "MSVC PowerShell",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/build-release/compile_commands.json"
 }
