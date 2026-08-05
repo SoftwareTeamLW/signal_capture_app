@@ -787,20 +787,43 @@ QDoubleSpinBox:focus {
                 <property name="toolTip"><string>保持每个频点观察到的最低电平；重新开启时清空历史。</string></property>
                </widget>
               </item>
-              <item row="1" column="5">
-               <widget class="QLabel" name="labelMarkerCount">
-                <property name="text"><string>Marker：</string></property>
+              <item row="2" column="0">
+               <widget class="QLabel" name="labelMarker"><property name="text"><string>Marker：</string></property></widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QComboBox" name="markerSelectComboBox">
+                <property name="minimumSize"><size><width>62</width><height>32</height></size></property>
+                <property name="maximumSize"><size><width>76</width><height>16777215</height></size></property>
+                <item><property name="text"><string>M1</string></property></item>
+                <item><property name="text"><string>M2</string></property></item>
+                <item><property name="text"><string>M3</string></property></item>
+                <item><property name="text"><string>M4</string></property></item>
                </widget>
               </item>
-              <item row="1" column="6">
-               <widget class="QSpinBox" name="markerCountSpinBox">
-                <property name="minimumSize"><size><width>52</width><height>32</height></size></property>
-                <property name="maximumSize"><size><width>65</width><height>16777215</height></size></property>
-                <property name="minimum"><number>0</number></property>
-                <property name="maximum"><number>4</number></property>
-                <property name="value"><number>0</number></property>
-                <property name="toolTip"><string>显示 0～4 个自动峰值 Marker。</string></property>
+              <item row="2" column="2">
+               <widget class="QCheckBox" name="markerEnableCheckBox"><property name="text"><string>启用</string></property></widget>
+              </item>
+              <item row="2" column="3" colspan="2">
+               <widget class="QDoubleSpinBox" name="markerFrequencySpinBox">
+                <property name="suffix"><string> MHz</string></property>
+                <property name="decimals"><number>6</number></property>
+                <property name="minimum"><double>0.000000000000000</double></property>
+                <property name="maximum"><double>100000.000000000000000</double></property>
+                <property name="minimumSize"><size><width>145</width><height>32</height></size></property>
+                <property name="toolTip"><string>当前 Marker 的固定频率；也可以直接点击频谱图定位。</string></property>
                </widget>
+              </item>
+              <item row="2" column="5">
+               <widget class="QPushButton" name="markerPeakButton"><property name="text"><string>峰值</string></property><property name="toolTip"><string>将当前 Marker 定位到全局最高峰。</string></property></widget>
+              </item>
+              <item row="2" column="6">
+               <widget class="QPushButton" name="markerNextPeakButton"><property name="text"><string>下一峰</string></property><property name="toolTip"><string>按峰值强度切换到下一个分离的局部峰。</string></property></widget>
+              </item>
+              <item row="2" column="7">
+               <widget class="QCheckBox" name="markerTrackCheckBox"><property name="text"><string>峰值跟踪</string></property><property name="toolTip"><string>只在当前频率附近跟踪，防止 Marker 跨频谱乱跳。</string></property></widget>
+              </item>
+              <item row="2" column="8" colspan="3">
+               <widget class="QLabel" name="markerHintLabel"><property name="text"><string>点击频谱可移动当前 Marker</string></property><property name="styleSheet"><string>color:#8f9ba8;</string></property></widget>
               </item>
               <item row="1" column="1">
                <widget class="QCheckBox" name="currentTraceCheckBox">

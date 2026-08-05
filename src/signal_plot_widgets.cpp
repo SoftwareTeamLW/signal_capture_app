@@ -4,9 +4,11 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QResizeEvent>
+#include <QMouseEvent>
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace {
 const QColor kBackground(3, 3, 3);
@@ -157,9 +159,116 @@ void SpectrumWidget::setCurrentTraceVisible(bool visible)
     update();
 }
 
-void SpectrumWidget::setMarkerCount(int count)
+void SpectrumWidget::setActiveMarker(int marker)
 {
-    markerCount_ = std::clamp(count, 0, 4);
+    activeMarker_ = std::clamp(marker, 0, 3);
+    update();
+}
+
+void SpectrumWidget::setMarkerEnabled(int marker, bool enabled)
+{
+    if (marker < 0 || marker >= int(markers_.size())) return;
+    markers_[marker].enabled = enabled;
+    if (enabled && markers_[marker].frequencyHz == 0.0) peakSearch(marker);
+    update();
+}
+
+void SpectrumWidget::setMarkerFrequency(int marker, double frequencyHz)
+{
+    if (marker < 0 || marker >= int(markers_.size())) return;
+    markers_[marker].frequencyHz = frequencyHz;
+    markers_[marker].peakRank = 0;
+    notifyMarkerChanged(marker);
+    update();
+}
+
+void SpectrumWidget::setMarkerTracking(int marker, bool enabled)
+{
+    if (marker < 0 || marker >= int(markers_.size())) return;
+    markers_[marker].tracking = enabled;
+}
+
+QVector<qsizetype> SpectrumWidget::peakCandidates() const
+{
+    QVector<qsizetype> result;
+    for (qsizetype i = 1; i + 1 < currentDb_.size(); ++i)
+        if (currentDb_[i] >= currentDb_[i - 1] && currentDb_[i] >= currentDb_[i + 1])
+            result.push_back(i);
+    std::sort(result.begin(), result.end(), [this](qsizetype a, qsizetype b) {
+        return currentDb_[a] > currentDb_[b];
+    });
+    QVector<qsizetype> separated;
+    const qsizetype guard = std::max<qsizetype>(2, currentDb_.size() / 100);
+    for (qsizetype candidate : result) {
+        bool usable = true;
+        for (qsizetype used : separated)
+            if (std::abs(candidate - used) < guard) usable = false;
+        if (usable) separated.push_back(candidate);
+        if (separated.size() >= 32) break;
+    }
+    return separated;
+}
+
+qsizetype SpectrumWidget::frequencyToIndex(double frequencyHz) const
+{
+    if (currentDb_.size() < 2 || sampleRate_ <= 0.0) return -1;
+    const double start = centerFrequency_ - sampleRate_ / 2.0;
+    return std::clamp<qsizetype>(
+        qsizetype(std::llround((frequencyHz - start) / sampleRate_ * (currentDb_.size() - 1))),
+        0, currentDb_.size() - 1);
+}
+
+double SpectrumWidget::indexToFrequency(qsizetype index) const
+{
+    if (currentDb_.size() < 2) return centerFrequency_;
+    return centerFrequency_ - sampleRate_ / 2.0 +
+        index * sampleRate_ / double(currentDb_.size() - 1);
+}
+
+void SpectrumWidget::notifyMarkerChanged(int marker)
+{
+    if (markerChangedCallback_) markerChangedCallback_(marker, markers_[marker].frequencyHz);
+}
+
+void SpectrumWidget::setMarkerChangedCallback(std::function<void(int, double)> callback)
+{
+    markerChangedCallback_ = std::move(callback);
+}
+
+double SpectrumWidget::markerFrequency(int marker) const
+{
+    return marker >= 0 && marker < int(markers_.size()) ? markers_[marker].frequencyHz : 0.0;
+}
+
+bool SpectrumWidget::markerEnabled(int marker) const
+{
+    return marker >= 0 && marker < int(markers_.size()) && markers_[marker].enabled;
+}
+
+bool SpectrumWidget::markerTracking(int marker) const
+{
+    return marker >= 0 && marker < int(markers_.size()) && markers_[marker].tracking;
+}
+
+void SpectrumWidget::peakSearch(int marker)
+{
+    if (marker < 0 || marker >= int(markers_.size())) return;
+    const auto candidates = peakCandidates();
+    if (candidates.isEmpty()) return;
+    markers_[marker].peakRank = 0;
+    markers_[marker].frequencyHz = indexToFrequency(candidates.front());
+    notifyMarkerChanged(marker);
+    update();
+}
+
+void SpectrumWidget::nextPeak(int marker)
+{
+    if (marker < 0 || marker >= int(markers_.size())) return;
+    const auto candidates = peakCandidates();
+    if (candidates.isEmpty()) return;
+    markers_[marker].peakRank = (markers_[marker].peakRank + 1) % candidates.size();
+    markers_[marker].frequencyHz = indexToFrequency(candidates[markers_[marker].peakRank]);
+    notifyMarkerChanged(marker);
     update();
 }
 
@@ -175,6 +284,43 @@ void SpectrumWidget::setSpectrum(const QVector<float>& currentDb,
     minHoldDb_ = minHoldDb;
     sampleRate_ = sampleRate;
     centerFrequency_ = centerFrequency;
+    for (int marker = 0; currentDb_.size() >= 3 && marker < int(markers_.size()); ++marker)
+        if (markers_[marker].enabled && markers_[marker].frequencyHz == 0.0)
+            peakSearch(marker);
+    // 跟踪只在 Marker 当前点附近约 2% FFT 范围内寻找最高点，避免跨频谱跳跃。
+    for (int marker = 0; currentDb_.size() >= 3 && marker < int(markers_.size()); ++marker) {
+        auto& state = markers_[marker];
+        if (!state.enabled || !state.tracking || state.frequencyHz == 0.0) continue;
+        const double start = centerFrequency_ - sampleRate_ / 2.0;
+        const double stop = centerFrequency_ + sampleRate_ / 2.0;
+        if (state.frequencyHz < start || state.frequencyHz > stop) continue;
+        const qsizetype center = frequencyToIndex(state.frequencyHz);
+        const qsizetype radius = std::max<qsizetype>(3, currentDb_.size() / 50);
+        const qsizetype begin = std::max<qsizetype>(1, center - radius);
+        const qsizetype end = std::min<qsizetype>(currentDb_.size() - 2, center + radius);
+        qsizetype best = begin;
+        for (qsizetype i = begin + 1; i <= end; ++i)
+            if (currentDb_[i] > currentDb_[best]) best = i;
+        const double trackedFrequency = indexToFrequency(best);
+        if (trackedFrequency != state.frequencyHz) {
+            state.frequencyHz = trackedFrequency;
+            notifyMarkerChanged(marker);
+        }
+    }
+    update();
+}
+
+void SpectrumWidget::mousePressEvent(QMouseEvent* event)
+{
+    const QRect area = plotRect(*this);
+    if (!area.contains(event->position().toPoint()) || currentDb_.size() < 2) return;
+    auto& state = markers_[activeMarker_];
+    state.enabled = true;
+    state.tracking = false;
+    const double ratio = std::clamp((event->position().x() - area.left()) / area.width(), 0.0, 1.0);
+    state.frequencyHz = centerFrequency_ - sampleRate_ / 2.0 + ratio * sampleRate_;
+    state.peakRank = 0;
+    notifyMarkerChanged(activeMarker_);
     update();
 }
 
@@ -218,43 +364,28 @@ void SpectrumWidget::paintEvent(QPaintEvent*)
             .arg(centerFrequency_ / 1e6, 0, 'f', 3)
             .arg(sampleRate_ / 1e6, 0, 'f', 3)
             .arg(currentDb_.size()));
-    if (markerCount_ > 0) {
-        // 从强到弱选择局部峰值，并保持一定间隔，避免四个 Marker 全挤在同一主瓣。
-        QVector<qsizetype> candidates;
-        for (qsizetype i = 1; i + 1 < currentDb_.size(); ++i) {
-            if (currentDb_[i] >= currentDb_[i - 1] && currentDb_[i] >= currentDb_[i + 1])
-                candidates.push_back(i);
-        }
-        std::sort(candidates.begin(), candidates.end(), [this](qsizetype a, qsizetype b) {
-            return currentDb_[a] > currentDb_[b];
-        });
-        QVector<qsizetype> selected;
-        const qsizetype guard = std::max<qsizetype>(2, currentDb_.size() / 100);
-        for (qsizetype candidate : candidates) {
-            bool separated = true;
-            for (qsizetype used : selected)
-                if (std::abs(candidate - used) < guard) separated = false;
-            if (separated) selected.push_back(candidate);
-            if (selected.size() >= markerCount_) break;
-        }
-        for (qsizetype marker = 0; marker < selected.size(); ++marker) {
-            const qsizetype peakIndex = selected[marker];
-            const float peakValue = currentDb_[peakIndex];
+    for (int marker = 0; marker < int(markers_.size()); ++marker) {
+        const auto& state = markers_[marker];
+        const double start = centerFrequency_ - sampleRate_ / 2.0;
+        const double stop = centerFrequency_ + sampleRate_ / 2.0;
+        if (!state.enabled || state.frequencyHz < start || state.frequencyHz > stop) continue;
+        const qsizetype peakIndex = frequencyToIndex(state.frequencyHz);
+        const float peakValue = currentDb_[peakIndex];
         const qreal peakX = area.left() + peakIndex * area.width() /
             qreal(currentDb_.size() - 1);
         const qreal peakY = dbToY(peakValue, area, float(top));
         const double peakHz = centerFrequency_ - sampleRate_ / 2.0 +
             peakIndex * sampleRate_ / double(currentDb_.size() - 1);
-            painter.setBrush(kMarker);
-            painter.setPen(kMarker);
-            painter.drawEllipse(QPointF(peakX, peakY), 2.5, 2.5);
-            painter.drawText(QPointF(peakX + 4, peakY - 4), tr("M%1").arg(marker + 1));
-            painter.drawText(area.right() - 245, 20 + int(marker) * 15,
+        painter.setBrush(marker == activeMarker_ ? kCurrent : kMarker);
+        painter.setPen(marker == activeMarker_ ? kCurrent : kMarker);
+        painter.drawLine(QPointF(peakX, area.top()), QPointF(peakX, area.bottom()));
+        painter.drawEllipse(QPointF(peakX, peakY), 2.5, 2.5);
+        painter.drawText(QPointF(peakX + 4, peakY - 4), tr("M%1").arg(marker + 1));
+        painter.drawText(area.right() - 245, 20 + marker * 15,
             tr("M%1  %2 MHz  %3 dBFS")
                 .arg(marker + 1)
                 .arg(peakHz / 1e6, 0, 'f', 6)
                 .arg(peakValue, 0, 'f', 1));
-        }
     }
 }
 

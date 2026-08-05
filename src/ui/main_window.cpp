@@ -13,12 +13,14 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QSpinBox>
+#include <QSignalBlocker>
 #include <QDateTime>
 #include <QDir>
 #include <QFileDialog>
 #include <QPushButton>
 #include <QPixmap>
 #include <QLabel>
+#include <QList>
 #include <QMessageBox>
 #include <QString>
 #include <QTime>
@@ -152,8 +154,52 @@ MainWindow::MainWindow(QWidget* parent)
     });
     connect(ui->currentTraceCheckBox, &QCheckBox::toggled,
             spectrumWidget_, &SpectrumWidget::setCurrentTraceVisible);
-    connect(ui->markerCountSpinBox, qOverload<int>(&QSpinBox::valueChanged),
-            spectrumWidget_, &SpectrumWidget::setMarkerCount);
+    // Marker 是有状态的测量工具：默认固定频率，只有用户主动搜索或开启局部跟踪时移动。
+    const auto loadSelectedMarker = [this]() {
+        const int marker = ui->markerSelectComboBox->currentIndex();
+        spectrumWidget_->setActiveMarker(marker);
+        const QSignalBlocker blockEnable(ui->markerEnableCheckBox);
+        const QSignalBlocker blockFrequency(ui->markerFrequencySpinBox);
+        const QSignalBlocker blockTrack(ui->markerTrackCheckBox);
+        ui->markerEnableCheckBox->setChecked(spectrumWidget_->markerEnabled(marker));
+        ui->markerFrequencySpinBox->setValue(spectrumWidget_->markerFrequency(marker) / 1e6);
+        ui->markerTrackCheckBox->setChecked(spectrumWidget_->markerTracking(marker));
+    };
+    connect(ui->markerSelectComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, [loadSelectedMarker](int) { loadSelectedMarker(); });
+    connect(ui->markerEnableCheckBox, &QCheckBox::toggled, this, [this](bool enabled) {
+        spectrumWidget_->setMarkerEnabled(ui->markerSelectComboBox->currentIndex(), enabled);
+    });
+    connect(ui->markerFrequencySpinBox,
+            qOverload<double>(&QDoubleSpinBox::valueChanged), this, [this](double mhz) {
+        spectrumWidget_->setMarkerFrequency(ui->markerSelectComboBox->currentIndex(), mhz * 1e6);
+    });
+    connect(ui->markerTrackCheckBox, &QCheckBox::toggled, this, [this](bool enabled) {
+        spectrumWidget_->setMarkerTracking(ui->markerSelectComboBox->currentIndex(), enabled);
+    });
+    connect(ui->markerPeakButton, &QPushButton::clicked, this, [this]() {
+        const int marker = ui->markerSelectComboBox->currentIndex();
+        spectrumWidget_->setMarkerEnabled(marker, true);
+        ui->markerEnableCheckBox->setChecked(true);
+        spectrumWidget_->peakSearch(marker);
+    });
+    connect(ui->markerNextPeakButton, &QPushButton::clicked, this, [this]() {
+        const int marker = ui->markerSelectComboBox->currentIndex();
+        const bool wasEnabled = spectrumWidget_->markerEnabled(marker);
+        spectrumWidget_->setMarkerEnabled(marker, true);
+        ui->markerEnableCheckBox->setChecked(true);
+        if (wasEnabled) spectrumWidget_->nextPeak(marker);
+    });
+    spectrumWidget_->setMarkerChangedCallback([this](int marker, double frequencyHz) {
+        if (marker != ui->markerSelectComboBox->currentIndex()) return;
+        const QSignalBlocker blocker(ui->markerFrequencySpinBox);
+        ui->markerFrequencySpinBox->setValue(frequencyHz / 1e6);
+        const QSignalBlocker enableBlocker(ui->markerEnableCheckBox);
+        ui->markerEnableCheckBox->setChecked(spectrumWidget_->markerEnabled(marker));
+        const QSignalBlocker trackBlocker(ui->markerTrackCheckBox);
+        ui->markerTrackCheckBox->setChecked(spectrumWidget_->markerTracking(marker));
+    });
+    loadSelectedMarker();
     const auto waterfallRangeChanged = [this]() {
         waterfallWidget_->setColorRange(
             static_cast<float>(ui->waterfallMinSpinBox->value()),
@@ -166,8 +212,23 @@ MainWindow::MainWindow(QWidget* parent)
     spectrumWidget_->setReferenceLevel(
         static_cast<float>(ui->referenceLevelSpinBox->value()));
     spectrumWidget_->setCurrentTraceVisible(ui->currentTraceCheckBox->isChecked());
-    spectrumWidget_->setMarkerCount(ui->markerCountSpinBox->value());
     waterfallRangeChanged();
+
+    // 顶部参数采用统一标签宽度和控件高度，三行各列自然对齐。
+    for (QLabel* label : {ui->labelFftSize, ui->labelWindowFunction,
+                          ui->labelReferenceLevel, ui->labelInputCompensation,
+                          ui->labelWaterfallRange, ui->labelMarker}) {
+        label->setMinimumWidth(70);
+        label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    }
+    const QList<QWidget*> alignedControls = {
+        ui->fftSizeComboBox, ui->windowFunctionComboBox, ui->referenceLevelSpinBox,
+        ui->inputCompensationSpinBox, ui->averageCountSpinBox,
+        ui->waterfallMinSpinBox, ui->waterfallMaxSpinBox,
+        ui->markerSelectComboBox, ui->markerFrequencySpinBox
+    };
+    for (QWidget* control : alignedControls)
+        control->setMinimumHeight(30);
 
     // 所有可点击按钮使用手型光标，增强可操作性反馈。
     const auto buttons = findChildren<QAbstractButton*>();

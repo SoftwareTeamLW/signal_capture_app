@@ -4,6 +4,9 @@
 #include <QVector>
 #include <QWidget>
 
+#include <array>
+#include <functional>
+
 // 三个控件只负责显示已经处理好的数据。FFT 不在 GUI 线程执行。
 class WaveformWidget final : public QWidget
 {
@@ -25,7 +28,16 @@ public:
     explicit SpectrumWidget(QWidget* parent = nullptr);
     void setReferenceLevel(float referenceLevelDb);
     void setCurrentTraceVisible(bool visible);
-    void setMarkerCount(int count);
+    void setActiveMarker(int marker);
+    void setMarkerEnabled(int marker, bool enabled);
+    void setMarkerFrequency(int marker, double frequencyHz);
+    void setMarkerTracking(int marker, bool enabled);
+    void peakSearch(int marker);
+    void nextPeak(int marker);
+    double markerFrequency(int marker) const;
+    bool markerEnabled(int marker) const;
+    bool markerTracking(int marker) const;
+    void setMarkerChangedCallback(std::function<void(int, double)> callback);
     void setSpectrum(const QVector<float>& currentDb,
                      const QVector<float>& averageDb,
                      const QVector<float>& maxHoldDb,
@@ -35,6 +47,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent*) override;
+    void mousePressEvent(QMouseEvent* event) override;
 
 private:
     QVector<float> currentDb_;
@@ -45,7 +58,19 @@ private:
     double centerFrequency_ = 0.0;
     float referenceLevelDb_ = 0.0f;
     bool currentTraceVisible_ = true;
-    int markerCount_ = 0;
+    struct MarkerState {
+        bool enabled = false;
+        bool tracking = false;
+        double frequencyHz = 0.0;
+        int peakRank = 0;
+    };
+    QVector<qsizetype> peakCandidates() const;
+    qsizetype frequencyToIndex(double frequencyHz) const;
+    double indexToFrequency(qsizetype index) const;
+    void notifyMarkerChanged(int marker);
+    std::array<MarkerState, 4> markers_{};
+    int activeMarker_ = 0;
+    std::function<void(int, double)> markerChangedCallback_;
 };
 
 class WaterfallWidget final : public QWidget
