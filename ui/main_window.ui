@@ -32,6 +32,8 @@ QPushButton#startReceiveButton:hover { background:#12b862; border-color:#42df8c;
 QPushButton#stopReceiveButton { background:#a93740; border:2px solid #d45b64; min-height:34px; font-weight:700; }
 QPushButton#stopReceiveButton:hover { background:#c44752; border-color:#ef737c; }
 QPushButton#stopReceiveButton:disabled { color:#7d8797; background:#222a38; border-color:#333d4d; }
+QPushButton#saveScreenshotButton { background:#216b52; border:1px solid #3ba97f; color:#f3fff9; font-weight:700; padding:3px 9px; }
+QPushButton#saveScreenshotButton:hover { background:#2b8566; border-color:#61cda4; }
 QGroupBox { border:1px solid #3d485b; border-radius:7px; margin-top:12px; padding-top:8px; font-weight:600; }
 QGroupBox::title { subcontrol-origin:margin; left:10px; padding:0 5px; color:#e8eef7; }
 QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox { background:#252e3e; border:1px solid #49566c; border-radius:4px; padding:4px; color:#e3eaf5; min-height:22px; }
@@ -143,8 +145,8 @@ QDoubleSpinBox:focus {
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>290</width>
-          <height>914</height>
+          <width>276</width>
+          <height>969</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="leftPanelLayout">
@@ -165,12 +167,30 @@ QDoubleSpinBox:focus {
          </property>
          <item>
           <widget class="QLabel" name="companyLogoLabel">
-           <property name="minimumSize"><size><width>0</width><height>72</height></size></property>
-           <property name="maximumSize"><size><width>16777215</width><height>90</height></size></property>
-           <property name="styleSheet"><string notr="true">background:#111722;border:1px dashed #4b5b70;border-radius:7px;color:#8291a6;</string></property>
-           <property name="text"><string>COMPANY LOGO</string></property>
-           <property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property>
-           <property name="scaledContents"><bool>false</bool></property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>72</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>90</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background:#111722;border:1px dashed #4b5b70;border-radius:7px;color:#8291a6;</string>
+           </property>
+           <property name="text">
+            <string>COMPANY LOGO</string>
+           </property>
+           <property name="scaledContents">
+            <bool>false</bool>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignCenter</set>
+           </property>
           </widget>
          </item>
          <item>
@@ -188,6 +208,18 @@ QDoubleSpinBox:focus {
             </item>
             <item row="0" column="1">
              <widget class="QLabel" name="deviceModelValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
               <property name="text">
                <string>未知</string>
               </property>
@@ -202,6 +234,18 @@ QDoubleSpinBox:focus {
             </item>
             <item row="1" column="1">
              <widget class="QLabel" name="connectionValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
               <property name="text">
                <string>未连接</string>
               </property>
@@ -216,6 +260,18 @@ QDoubleSpinBox:focus {
             </item>
             <item row="2" column="1">
              <widget class="QLabel" name="interfaceTypeValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
               <property name="text">
                <string>--</string>
               </property>
@@ -230,11 +286,23 @@ QDoubleSpinBox:focus {
             </item>
             <item row="3" column="1">
              <widget class="QLabel" name="connectionArgsValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
               <property name="text">
                <string>--</string>
               </property>
               <property name="textInteractionFlags">
-               <set>Qt::TextSelectableByMouse</set>
+               <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
               </property>
              </widget>
             </item>
@@ -247,6 +315,18 @@ QDoubleSpinBox:focus {
             </item>
             <item row="4" column="1">
              <widget class="QLabel" name="deviceConnectionStatusLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
               <property name="styleSheet">
                <string notr="true">color:#ffba4a;</string>
               </property>
@@ -264,6 +344,18 @@ QDoubleSpinBox:focus {
             </item>
             <item row="5" column="1">
              <widget class="QLabel" name="fpgaVersionValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
               <property name="text">
                <string>--</string>
               </property>
@@ -278,6 +370,18 @@ QDoubleSpinBox:focus {
             </item>
             <item row="6" column="1">
              <widget class="QLabel" name="temperatureValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
               <property name="text">
                <string>-- °C</string>
               </property>
@@ -285,13 +389,31 @@ QDoubleSpinBox:focus {
             </item>
             <item row="7" column="0">
              <widget class="QLabel" name="labelConnectionArgs">
-              <property name="text"><string>指定参数：</string></property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>指定参数：</string>
+              </property>
              </widget>
             </item>
             <item row="7" column="1">
              <widget class="QLineEdit" name="connectionArgsEdit">
-              <property name="placeholderText"><string>serial=... / type=x300,addr=...</string></property>
-              <property name="toolTip"><string>等价于 UHD --args，用于从多台 USRP 中指定目标设备。</string></property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>32</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>等价于 UHD --args，用于从多台 USRP 中指定目标设备。</string>
+              </property>
+              <property name="placeholderText">
+               <string>serial=... / type=x300,addr=...</string>
+              </property>
              </widget>
             </item>
             <item row="8" column="0" colspan="2">
@@ -345,6 +467,12 @@ QDoubleSpinBox:focus {
             </property>
             <item row="0" column="1">
              <widget class="QDoubleSpinBox" name="centerFrequencySpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>32</height>
+               </size>
+              </property>
               <property name="suffix">
                <string> MHz</string>
               </property>
@@ -374,6 +502,12 @@ QDoubleSpinBox:focus {
             </item>
             <item row="1" column="1">
              <widget class="QDoubleSpinBox" name="bandwidthSpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>32</height>
+               </size>
+              </property>
               <property name="toolTip">
                <string>USRP 接收前端滤波带宽；不是 FFT 显示跨度。频谱跨度由采样率决定。</string>
               </property>
@@ -403,6 +537,12 @@ QDoubleSpinBox:focus {
             </item>
             <item row="2" column="1">
              <widget class="QComboBox" name="channelComboBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>32</height>
+               </size>
+              </property>
               <item>
                <property name="text">
                 <string>通道 0</string>
@@ -430,6 +570,12 @@ QDoubleSpinBox:focus {
             </item>
             <item row="3" column="1">
              <widget class="QComboBox" name="antennaComboBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>32</height>
+               </size>
+              </property>
               <item>
                <property name="text">
                 <string>RX2</string>
@@ -457,6 +603,12 @@ QDoubleSpinBox:focus {
             </item>
             <item row="4" column="1">
              <widget class="QDoubleSpinBox" name="sampleRateSpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>32</height>
+               </size>
+              </property>
               <property name="suffix">
                <string> MSps</string>
               </property>
@@ -483,6 +635,12 @@ QDoubleSpinBox:focus {
             </item>
             <item row="5" column="1">
              <widget class="QDoubleSpinBox" name="gainSpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>32</height>
+               </size>
+              </property>
               <property name="suffix">
                <string> dB</string>
               </property>
@@ -494,26 +652,14 @@ QDoubleSpinBox:focus {
               </property>
              </widget>
             </item>
-            <item row="8" column="0">
-             <widget class="QLabel" name="labelDeviceArgs">
-              <property name="styleSheet"><string notr="true">padding:2px</string></property>
-              <property name="text"><string>设备参数：</string></property>
-              <property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property>
-             </widget>
-            </item>
-            <item row="8" column="1">
-             <widget class="QLineEdit" name="deviceArgsEdit">
-              <property name="placeholderText">
-               <string>例如 master_clock_rate=200e6,clock_source=external</string>
-              </property>
-             </widget>
-            </item>
             <item row="9" column="0" colspan="2">
              <widget class="QCheckBox" name="autoBandwidthCheckBox">
               <property name="text">
                <string>前端带宽跟随采样率</string>
               </property>
-              <property name="checked"><bool>true</bool></property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item row="10" column="0" colspan="2">
@@ -544,6 +690,32 @@ QDoubleSpinBox:focus {
               </property>
               <property name="text">
                <string>中心频率：</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QLineEdit" name="deviceArgsEdit">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>32</height>
+               </size>
+              </property>
+              <property name="placeholderText">
+               <string>例如 master_clock_rate=200e6,clock_source=external</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="labelDeviceArgs">
+              <property name="styleSheet">
+               <string notr="true">padding:2px</string>
+              </property>
+              <property name="text">
+               <string>设备参数：</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -680,29 +852,614 @@ QDoubleSpinBox:focus {
             <item>
              <layout class="QGridLayout" name="spectrumControlsLayout">
               <property name="spacing">
-               <number>8</number>
+               <number>5</number>
               </property>
-              <item row="0" column="0">
-               <widget class="QLabel" name="labelFftSize">
+              <item row="0" column="10">
+               <spacer name="spectrumControlsSpacer">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Policy::Preferred</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="0" column="6">
+               <widget class="QCheckBox" name="currentTraceCheckBox">
+                <property name="maximumSize">
+                 <size>
+                  <width>80</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="cursor">
+                 <cursorShape>OpenHandCursor</cursorShape>
+                </property>
                 <property name="text">
-                 <string>FFT 点数：</string>
+                 <string>实时波形</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
-              <widget class="QComboBox" name="fftSizeComboBox">
-                <property name="currentIndex"><number>0</number></property>
+              <item row="0" column="13">
+               <widget class="QCheckBox" name="markerEnableCheckBox">
+                <property name="maximumSize">
+                 <size>
+                  <width>80</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="cursor">
+                 <cursorShape>OpenHandCursor</cursorShape>
+                </property>
+                <property name="text">
+                 <string>启用</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="8">
+               <widget class="QLabel" name="labelWaterfallRange">
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>瀑布范围：</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="12">
+               <widget class="QPushButton" name="markerPeakButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="minimumSize">
                  <size>
-                  <width>72</width>
-                  <height>32</height>
+                  <width>0</width>
+                  <height>25</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>120</width>
-                  <height>16777215</height>
+                  <width>60</width>
+                  <height>25</height>
                  </size>
+                </property>
+                <property name="toolTip">
+                 <string>将当前 Marker 定位到全局最高峰。</string>
+                </property>
+                <property name="text">
+                 <string>峰值</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QComboBox" name="windowFunctionComboBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>100</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>190</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Hann</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Hamming</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Blackman-Harris</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Flat Top</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="0" column="12">
+               <widget class="QComboBox" name="markerSelectComboBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>60</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>M1</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>M2</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>M3</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>M4</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="0" column="5">
+               <widget class="QCheckBox" name="minHoldCheckBox">
+                <property name="maximumSize">
+                 <size>
+                  <width>80</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="cursor">
+                 <cursorShape>OpenHandCursor</cursorShape>
+                </property>
+                <property name="toolTip">
+                 <string>保持每个频点观察到的最低电平；重新开启时清空历史。</string>
+                </property>
+                <property name="text">
+                 <string>最小保持</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="14">
+               <widget class="QCheckBox" name="markerTrackCheckBox">
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="cursor">
+                 <cursorShape>OpenHandCursor</cursorShape>
+                </property>
+                <property name="toolTip">
+                 <string>只在当前频率附近跟踪，防止 Marker 跨频谱乱跳。</string>
+                </property>
+                <property name="text">
+                 <string>峰值跟踪</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="3">
+               <widget class="QDoubleSpinBox" name="referenceLevelSpinBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>75</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>75</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="suffix">
+                 <string> dBFS</string>
+                </property>
+                <property name="minimum">
+                 <double>-200.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>50.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="5">
+               <widget class="QCheckBox" name="averageCheckBox">
+                <property name="maximumSize">
+                 <size>
+                  <width>80</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="cursor">
+                 <cursorShape>OpenHandCursor</cursorShape>
+                </property>
+                <property name="text">
+                 <string>平均</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QDoubleSpinBox" name="inputCompensationSpinBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>75</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>75</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>例如链路插损 6 dB，输入 +6 dB。</string>
+                </property>
+                <property name="suffix">
+                 <string> dB</string>
+                </property>
+                <property name="decimals">
+                 <number>2</number>
+                </property>
+                <property name="minimum">
+                 <double>-100.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="labelWindowFunction">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>窗函数：</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="14">
+               <widget class="QDoubleSpinBox" name="markerFrequencySpinBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>100</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>当前 Marker 的固定频率；也可以直接点击频谱图定位。</string>
+                </property>
+                <property name="suffix">
+                 <string> MHz</string>
+                </property>
+                <property name="decimals">
+                 <number>6</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>100000.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLabel" name="labelReferenceLevel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>参考电平：</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="6">
+               <widget class="QSpinBox" name="averageCountSpinBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>54</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>72</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="minimum">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <number>1000</number>
+                </property>
+                <property name="value">
+                 <number>10</number>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="4">
+               <widget class="QCheckBox" name="maxHoldCheckBox">
+                <property name="maximumSize">
+                 <size>
+                  <width>80</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="cursor">
+                 <cursorShape>OpenHandCursor</cursorShape>
+                </property>
+                <property name="text">
+                 <string>峰值保持</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="labelFftSize">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>FFT 点数：</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="9">
+               <widget class="QDoubleSpinBox" name="waterfallMaxSpinBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>130</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>130</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="prefix">
+                 <string>高 </string>
+                </property>
+                <property name="suffix">
+                 <string> dBFS</string>
+                </property>
+                <property name="minimum">
+                 <double>-200.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>50.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>-20.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="9">
+               <widget class="QDoubleSpinBox" name="waterfallMinSpinBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>130</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>130</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="prefix">
+                 <string>低 </string>
+                </property>
+                <property name="suffix">
+                 <string> dBFS</string>
+                </property>
+                <property name="minimum">
+                 <double>-200.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>0.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>-125.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="labelInputCompensation">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>补偿线缆、衰减器等插损；正值会提高显示电平。</string>
+                </property>
+                <property name="text">
+                 <string>输入补偿：</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="13">
+               <widget class="QPushButton" name="markerNextPeakButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>按峰值强度切换到下一个分离的局部峰。</string>
+                </property>
+                <property name="text">
+                 <string>下一峰</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QComboBox" name="fftSizeComboBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>50</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="currentIndex">
+                 <number>0</number>
                 </property>
                 <item>
                  <property name="text">
@@ -731,178 +1488,13 @@ QDoubleSpinBox:focus {
                 </item>
                </widget>
               </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="labelWindowFunction">
-                <property name="text">
-                 <string>窗函数：</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3">
-               <widget class="QComboBox" name="windowFunctionComboBox">
-                <property name="minimumSize">
-                 <size>
-                  <width>105</width>
-                  <height>32</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>190</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>Hann</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Hamming</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Blackman-Harris</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Flat Top</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QCheckBox" name="maxHoldCheckBox">
-                <property name="text">
-                 <string>峰值保持</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="4">
-               <widget class="QCheckBox" name="minHoldCheckBox">
-                <property name="text"><string>最小保持</string></property>
-                <property name="toolTip"><string>保持每个频点观察到的最低电平；重新开启时清空历史。</string></property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="labelMarker"><property name="text"><string>Marker：</string></property></widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QComboBox" name="markerSelectComboBox">
-                <property name="minimumSize"><size><width>62</width><height>32</height></size></property>
-                <property name="maximumSize"><size><width>76</width><height>16777215</height></size></property>
-                <item><property name="text"><string>M1</string></property></item>
-                <item><property name="text"><string>M2</string></property></item>
-                <item><property name="text"><string>M3</string></property></item>
-                <item><property name="text"><string>M4</string></property></item>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QCheckBox" name="markerEnableCheckBox"><property name="text"><string>启用</string></property></widget>
-              </item>
-              <item row="2" column="3" colspan="2">
-               <widget class="QDoubleSpinBox" name="markerFrequencySpinBox">
-                <property name="suffix"><string> MHz</string></property>
-                <property name="decimals"><number>6</number></property>
-                <property name="minimum"><double>0.000000000000000</double></property>
-                <property name="maximum"><double>100000.000000000000000</double></property>
-                <property name="minimumSize"><size><width>145</width><height>32</height></size></property>
-                <property name="toolTip"><string>当前 Marker 的固定频率；也可以直接点击频谱图定位。</string></property>
-               </widget>
-              </item>
-              <item row="2" column="5">
-               <widget class="QPushButton" name="markerPeakButton"><property name="text"><string>峰值</string></property><property name="toolTip"><string>将当前 Marker 定位到全局最高峰。</string></property></widget>
-              </item>
-              <item row="2" column="6">
-               <widget class="QPushButton" name="markerNextPeakButton"><property name="text"><string>下一峰</string></property><property name="toolTip"><string>按峰值强度切换到下一个分离的局部峰。</string></property></widget>
-              </item>
-              <item row="2" column="7">
-               <widget class="QCheckBox" name="markerTrackCheckBox"><property name="text"><string>峰值跟踪</string></property><property name="toolTip"><string>只在当前频率附近跟踪，防止 Marker 跨频谱乱跳。</string></property></widget>
-              </item>
-              <item row="2" column="8" colspan="3">
-               <widget class="QLabel" name="markerHintLabel"><property name="text"><string>点击频谱可移动当前 Marker</string></property><property name="styleSheet"><string>color:#8f9ba8;</string></property></widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QCheckBox" name="currentTraceCheckBox">
-                <property name="text"><string>实时波形</string></property>
-                <property name="checked"><bool>true</bool></property>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QCheckBox" name="averageCheckBox">
-                <property name="text">
-                 <string>平均</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="3">
-               <widget class="QSpinBox" name="averageCountSpinBox">
-                <property name="minimumSize">
-                 <size>
-                  <width>65</width>
-                  <height>32</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>90</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="minimum">
-                 <number>1</number>
-                </property>
-                <property name="maximum">
-                 <number>1000</number>
-                </property>
-                <property name="value">
-                 <number>10</number>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="4">
-               <widget class="QLabel" name="labelReferenceLevel">
-                <property name="text"><string>参考电平：</string></property>
-               </widget>
-              </item>
-              <item row="0" column="5">
-               <widget class="QDoubleSpinBox" name="referenceLevelSpinBox">
-                <property name="suffix"><string> dBFS</string></property>
-                <property name="minimum"><double>-200.000000000000000</double></property>
-                <property name="maximum"><double>50.000000000000000</double></property>
-                <property name="value"><double>0.000000000000000</double></property>
-               </widget>
-              </item>
-              <item row="1" column="7">
-               <widget class="QLabel" name="labelWaterfallRange">
-                <property name="text"><string>瀑布范围：</string></property>
-               </widget>
-              </item>
-              <item row="1" column="8">
-               <widget class="QDoubleSpinBox" name="waterfallMinSpinBox">
-                <property name="prefix"><string>低 </string></property>
-                <property name="suffix"><string> dBFS</string></property>
-                <property name="minimum"><double>-200.000000000000000</double></property>
-                <property name="maximum"><double>0.000000000000000</double></property>
-                <property name="value"><double>-125.000000000000000</double></property>
-               </widget>
-              </item>
-              <item row="1" column="9">
-               <widget class="QDoubleSpinBox" name="waterfallMaxSpinBox">
-                <property name="prefix"><string>高 </string></property>
-                <property name="suffix"><string> dBFS</string></property>
-                <property name="minimum"><double>-200.000000000000000</double></property>
-                <property name="maximum"><double>50.000000000000000</double></property>
-                <property name="value"><double>-20.000000000000000</double></property>
-               </widget>
-              </item>
-              <item row="1" column="10">
-               <spacer name="spectrumControlsSpacer">
+              <item row="0" column="7">
+               <spacer name="horizontalSpacer">
                 <property name="orientation">
                  <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Policy::Preferred</enum>
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
@@ -912,28 +1504,40 @@ QDoubleSpinBox:focus {
                 </property>
                </spacer>
               </item>
-              <item row="0" column="6">
-               <widget class="QLabel" name="labelInputCompensation">
-                <property name="text"><string>输入补偿：</string></property>
-                <property name="toolTip"><string>补偿线缆、衰减器等插损；正值会提高显示电平。</string></property>
+              <item row="0" column="11">
+               <widget class="QLabel" name="labelMarker">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Marker：</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                </property>
                </widget>
               </item>
-              <item row="0" column="7">
-               <widget class="QDoubleSpinBox" name="inputCompensationSpinBox">
-                <property name="suffix"><string> dB</string></property>
-                <property name="minimum"><double>-100.000000000000000</double></property>
-                <property name="maximum"><double>100.000000000000000</double></property>
-                <property name="decimals"><number>2</number></property>
-                <property name="value"><double>0.000000000000000</double></property>
-                <property name="toolTip"><string>例如链路插损 6 dB，输入 +6 dB。</string></property>
-               </widget>
-              </item>
-              <item row="0" column="8">
+              <item row="1" column="15">
                <widget class="QPushButton" name="saveScreenshotButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="minimumSize">
                  <size>
-                  <width>90</width>
-                  <height>0</height>
+                  <width>74</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>120</width>
+                  <height>25</height>
                  </size>
                 </property>
                 <property name="text">
@@ -1140,8 +1744,8 @@ QDoubleSpinBox:focus {
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>318</width>
-          <height>914</height>
+          <width>280</width>
+          <height>954</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="rightPanelLayout">

@@ -214,11 +214,12 @@ MainWindow::MainWindow(QWidget* parent)
     spectrumWidget_->setCurrentTraceVisible(ui->currentTraceCheckBox->isChecked());
     waterfallRangeChanged();
 
-    // 顶部参数采用统一标签宽度和控件高度，三行各列自然对齐。
+    // 顶部参数按显示、Trace、Marker 三组排列；紧凑尺寸避免分隔区缩小时重叠。
     for (QLabel* label : {ui->labelFftSize, ui->labelWindowFunction,
                           ui->labelReferenceLevel, ui->labelInputCompensation,
                           ui->labelWaterfallRange, ui->labelMarker}) {
-        label->setMinimumWidth(70);
+        label->setMinimumWidth(62);
+        label->setMaximumWidth(76);
         label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     }
     const QList<QWidget*> alignedControls = {
@@ -228,7 +229,15 @@ MainWindow::MainWindow(QWidget* parent)
         ui->markerSelectComboBox, ui->markerFrequencySpinBox
     };
     for (QWidget* control : alignedControls)
-        control->setMinimumHeight(30);
+        control->setMinimumHeight(28);
+
+    ui->fftSizeComboBox->setMaximumWidth(92);
+    ui->windowFunctionComboBox->setMaximumWidth(150);
+    ui->referenceLevelSpinBox->setMaximumWidth(108);
+    ui->inputCompensationSpinBox->setMaximumWidth(96);
+    ui->markerFrequencySpinBox->setMaximumWidth(158);
+    ui->markerPeakButton->setMaximumWidth(62);
+    ui->markerNextPeakButton->setMaximumWidth(72);
 
     // 所有可点击按钮使用手型光标，增强可操作性反馈。
     const auto buttons = findChildren<QAbstractButton*>();
