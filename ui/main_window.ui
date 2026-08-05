@@ -1,0 +1,1476 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1548</width>
+    <height>1010</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1180</width>
+    <height>720</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Signal Capture</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow, QWidget#centralWidget { background:#111722; color:#dce5f3; font:10pt &quot;Microsoft YaHei UI&quot;; }
+QMenuBar { background:#1b2230; color:#e7edf7; border-bottom:1px solid #3a465a; }
+QMenuBar::item:selected { background:#2b374a; }
+QToolBar { background:#1a2230; border-bottom:1px solid #3c485c; spacing:7px; padding:5px; }
+QToolButton, QPushButton { background:#263247; border:1px solid #4b5b75; border-radius:5px; padding:5px 10px; color:#e8eef7; }
+QToolButton:hover, QPushButton:hover { background:#33435c; border-color:#6f84a5; }
+QToolButton:pressed, QPushButton:pressed { background:#1d2737; padding-top:6px; padding-bottom:4px; }
+QPushButton#startReceiveButton { background:#0d9b52; border:2px solid #23c474; min-height:34px; font-weight:700; }
+QPushButton#startReceiveButton:hover { background:#12b862; border-color:#42df8c; }
+QPushButton#stopReceiveButton { background:#a93740; border:2px solid #d45b64; min-height:34px; font-weight:700; }
+QPushButton#stopReceiveButton:hover { background:#c44752; border-color:#ef737c; }
+QPushButton#stopReceiveButton:disabled { color:#7d8797; background:#222a38; border-color:#333d4d; }
+QGroupBox { border:1px solid #3d485b; border-radius:7px; margin-top:12px; padding-top:8px; font-weight:600; }
+QGroupBox::title { subcontrol-origin:margin; left:10px; padding:0 5px; color:#e8eef7; }
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox { background:#252e3e; border:1px solid #49566c; border-radius:4px; padding:4px; color:#e3eaf5; min-height:22px; }
+QCheckBox, QRadioButton, QLabel { color:#dbe3ef; }
+QTabWidget::pane { border:1px solid #3f4b60; background:#0b1018; }
+QTabBar::tab { background:#202938; color:#dbe3ee; padding:8px 22px; border:1px solid #3b4658; }
+QTabBar::tab:selected { background:#153b60; border-bottom:2px solid #2c9cf0; }
+QFrame[plotArea=&quot;true&quot;] { background:#05080d; border:1px solid #384456; border-radius:4px; }
+QLabel[plotTitle=&quot;true&quot;] { color:#8290a5; font:600 12pt &quot;Microsoft YaHei UI&quot;; }
+QTableWidget { background:#151c27; alternate-background-color:#1c2532; gridline-color:#394456; color:#dce4ef; }
+QHeaderView::section { background:#242d3d; color:#dce4ef; border:1px solid #3e495b; padding:4px; }
+QPlainTextEdit { background:#0b1119; color:#21d76b; border:1px solid #3b4658; font:9pt &quot;Consolas&quot;; }
+QScrollArea { border:0; background:transparent; }
+QSplitter::handle { background:#303b4c; }
+QStatusBar { background:#1b2331; color:#dce5f0; border-top:1px solid #3d485a; }
+
+/* 左右参数面板 */
+QWidget#leftPanel,
+QWidget#rightPanel {
+    background: #111722;
+}
+
+/* 分组框内部增加轻微层次 */
+QGroupBox {
+    background: #171f2c;
+    border: 1px solid #3d485b;
+    border-radius: 7px;
+    margin-top: 14px;
+    padding-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px;
+    padding: 0 6px;
+    color: #f0f4fa;
+    background: #111722;
+}
+
+/* 禁用状态 */
+QLineEdit:disabled,
+QComboBox:disabled,
+QSpinBox:disabled,
+QDoubleSpinBox:disabled,
+QPushButton:disabled {
+    color: #788395;
+    background: #1b2230;
+    border-color: #333d4d;
+}
+
+QCheckBox:disabled,
+QRadioButton:disabled,
+QLabel:disabled {
+    color: #6f7a8b;
+}
+
+/* 输入框获得焦点时使用蓝色边框 */
+QLineEdit:focus,
+QComboBox:focus,
+QSpinBox:focus,
+QDoubleSpinBox:focus {
+    border: 1px solid #2c9cf0;
+}</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QVBoxLayout" name="centralLayout">
+    <property name="spacing">
+     <number>6</number>
+    </property>
+    <property name="leftMargin">
+     <number>8</number>
+    </property>
+    <property name="topMargin">
+     <number>8</number>
+    </property>
+    <property name="rightMargin">
+     <number>8</number>
+    </property>
+    <property name="bottomMargin">
+     <number>6</number>
+    </property>
+    <item>
+     <widget class="QSplitter" name="mainSplitter">
+      <property name="orientation">
+       <enum>Qt::Orientation::Horizontal</enum>
+      </property>
+      <property name="childrenCollapsible">
+       <bool>false</bool>
+      </property>
+      <widget class="QScrollArea" name="leftScrollArea">
+       <property name="minimumSize">
+        <size>
+         <width>290</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>380</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="leftPanel">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>290</width>
+          <height>914</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="leftPanelLayout">
+         <property name="spacing">
+          <number>8</number>
+         </property>
+         <property name="leftMargin">
+          <number>4</number>
+         </property>
+         <property name="topMargin">
+          <number>4</number>
+         </property>
+         <property name="rightMargin">
+          <number>4</number>
+         </property>
+         <property name="bottomMargin">
+          <number>4</number>
+         </property>
+         <item>
+          <widget class="QGroupBox" name="deviceStatusGroupBox">
+           <property name="title">
+            <string>设备连接状态</string>
+           </property>
+           <layout class="QGridLayout" name="deviceStatusLayout">
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelDeviceModel">
+              <property name="text">
+               <string>设备型号：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="deviceModelValueLabel">
+              <property name="text">
+               <string>未知</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelConnection">
+              <property name="text">
+               <string>连接方式：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="connectionValueLabel">
+              <property name="text">
+               <string>未连接</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="labelInterfaceType">
+              <property name="text">
+               <string>接口类型：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="interfaceTypeValueLabel">
+              <property name="text">
+               <string>--</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="labelConnectionArgsValue">
+              <property name="text">
+               <string>连接参数：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="connectionArgsValueLabel">
+              <property name="text">
+               <string>--</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="labelStatus">
+              <property name="text">
+               <string>连接状态：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLabel" name="deviceConnectionStatusLabel">
+              <property name="styleSheet">
+               <string notr="true">color:#ffba4a;</string>
+              </property>
+              <property name="text">
+               <string>● 未连接</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="labelFpga">
+              <property name="text">
+               <string>FPGA 版本：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLabel" name="fpgaVersionValueLabel">
+              <property name="text">
+               <string>--</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="labelTemperature">
+              <property name="text">
+               <string>设备温度：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QLabel" name="temperatureValueLabel">
+              <property name="text">
+               <string>-- °C</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0" colspan="2">
+             <layout class="QHBoxLayout" name="deviceButtonsLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QPushButton" name="findDevicesButton">
+                <property name="text">
+                 <string>查找设备</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="connectDeviceButton">
+                <property name="text">
+                 <string>连接设备</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="disconnectDeviceButton">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>断开设备</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="acquisitionParametersGroupBox">
+           <property name="title">
+            <string>采集参数设置</string>
+           </property>
+           <layout class="QFormLayout" name="acquisitionParametersLayout">
+            <property name="fieldGrowthPolicy">
+             <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
+            </property>
+            <property name="horizontalSpacing">
+             <number>10</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>7</number>
+            </property>
+            <item row="0" column="1">
+             <widget class="QDoubleSpinBox" name="centerFrequencySpinBox">
+              <property name="suffix">
+               <string> MHz</string>
+              </property>
+              <property name="decimals">
+               <number>3</number>
+              </property>
+              <property name="maximum">
+               <double>6000.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>2400.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelBandwidth">
+              <property name="styleSheet">
+               <string notr="true">padding:2px</string>
+              </property>
+              <property name="text">
+               <string>前端带宽：</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QDoubleSpinBox" name="bandwidthSpinBox">
+              <property name="toolTip">
+               <string>USRP 接收前端滤波带宽；不是 FFT 显示跨度。频谱跨度由采样率决定。</string>
+              </property>
+              <property name="suffix">
+               <string> MHz</string>
+              </property>
+              <property name="maximum">
+               <double>500.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>5.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="labelChannel">
+              <property name="styleSheet">
+               <string notr="true">padding:2px</string>
+              </property>
+              <property name="text">
+               <string>通道：</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QComboBox" name="channelComboBox">
+              <item>
+               <property name="text">
+                <string>通道 0</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>通道 1</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="labelAntenna">
+              <property name="styleSheet">
+               <string notr="true">padding:2px</string>
+              </property>
+              <property name="text">
+               <string>天线：</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QComboBox" name="antennaComboBox">
+              <item>
+               <property name="text">
+                <string>RX2</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>TX/RX</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="labelSampleRate">
+              <property name="styleSheet">
+               <string notr="true">padding:2px</string>
+              </property>
+              <property name="text">
+               <string>采样率：</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QDoubleSpinBox" name="sampleRateSpinBox">
+              <property name="suffix">
+               <string> MSps</string>
+              </property>
+              <property name="maximum">
+               <double>1000.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>5.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="labelGain">
+              <property name="styleSheet">
+               <string notr="true">padding:2px</string>
+              </property>
+              <property name="text">
+               <string>增益：</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QDoubleSpinBox" name="gainSpinBox">
+              <property name="suffix">
+               <string> dB</string>
+              </property>
+              <property name="maximum">
+               <double>100.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>20.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="labelConnectionArgs">
+              <property name="styleSheet">
+               <string notr="true">padding:2px</string>
+              </property>
+              <property name="text">
+               <string>连接参数：</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1">
+             <widget class="QLineEdit" name="connectionArgsEdit">
+              <property name="placeholderText">
+               <string>例如 serial=... 或 type=x300,addr=...</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QLabel" name="labelDeviceArgs">
+              <property name="styleSheet"><string notr="true">padding:2px</string></property>
+              <property name="text"><string>设备参数：</string></property>
+              <property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property>
+             </widget>
+            </item>
+            <item row="8" column="1">
+             <widget class="QLineEdit" name="deviceArgsEdit">
+              <property name="placeholderText">
+               <string>例如 master_clock_rate=200e6,clock_source=external</string>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="0" colspan="2">
+             <widget class="QCheckBox" name="autoBandwidthCheckBox">
+              <property name="text">
+               <string>前端带宽跟随采样率</string>
+              </property>
+              <property name="checked"><bool>true</bool></property>
+             </widget>
+            </item>
+            <item row="10" column="0" colspan="2">
+             <layout class="QHBoxLayout" name="receiveButtonsLayout">
+              <item>
+               <widget class="QPushButton" name="startReceiveButton">
+                <property name="text">
+                 <string>▶ 开始接收</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="stopReceiveButton">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>■ 停止采集</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelCenterFrequency">
+              <property name="styleSheet">
+               <string notr="true">padding:2px</string>
+              </property>
+              <property name="text">
+               <string>中心频率：</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="acquisitionModeGroupBox">
+           <property name="title">
+            <string>采集模式</string>
+           </property>
+           <layout class="QVBoxLayout" name="acquisitionModeLayout">
+            <item>
+             <widget class="QRadioButton" name="continuousRadioButton">
+              <property name="text">
+               <string>连续采集（实时）</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="timedRadioButton">
+              <property name="text">
+               <string>定长采集</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QFormLayout" name="durationLayout">
+              <item row="0" column="0">
+               <widget class="QLabel" name="labelDuration">
+                <property name="text">
+                 <string>采集时长：</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QDoubleSpinBox" name="durationSpinBox">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="suffix">
+                 <string> s</string>
+                </property>
+                <property name="maximum">
+                 <double>86400.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>5.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="saveIqCheckBox">
+              <property name="text">
+               <string>保存复数 IQ 数据</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <spacer name="leftVerticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="centerPanel">
+       <property name="minimumSize">
+        <size>
+         <width>560</width>
+         <height>0</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="centerPanelLayout">
+        <property name="spacing">
+         <number>6</number>
+        </property>
+        <property name="leftMargin">
+         <number>4</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>4</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QTabWidget" name="displayTabWidget">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="spectrumTab">
+           <attribute name="title">
+            <string>频谱图</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="spectrumTabLayout">
+            <property name="spacing">
+             <number>6</number>
+            </property>
+            <property name="leftMargin">
+             <number>6</number>
+            </property>
+            <property name="topMargin">
+             <number>6</number>
+            </property>
+            <property name="rightMargin">
+             <number>6</number>
+            </property>
+            <property name="bottomMargin">
+             <number>6</number>
+            </property>
+            <item>
+             <layout class="QGridLayout" name="spectrumControlsLayout">
+              <property name="spacing">
+               <number>8</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="labelFftSize">
+                <property name="text">
+                 <string>FFT 点数：</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+              <widget class="QComboBox" name="fftSizeComboBox">
+                <property name="currentIndex"><number>0</number></property>
+                <property name="minimumSize">
+                 <size>
+                  <width>72</width>
+                  <height>32</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>120</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>1024</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>2048</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>4096</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>8192</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>16384</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="labelWindowFunction">
+                <property name="text">
+                 <string>窗函数：</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QComboBox" name="windowFunctionComboBox">
+                <property name="minimumSize">
+                 <size>
+                  <width>105</width>
+                  <height>32</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>190</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Hann</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Hamming</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Blackman-Harris</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Flat Top</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QCheckBox" name="maxHoldCheckBox">
+                <property name="text">
+                 <string>峰值保持</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QCheckBox" name="currentTraceCheckBox">
+                <property name="text"><string>实时波形</string></property>
+                <property name="checked"><bool>true</bool></property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QCheckBox" name="averageCheckBox">
+                <property name="text">
+                 <string>平均</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="3">
+               <widget class="QSpinBox" name="averageCountSpinBox">
+                <property name="minimumSize">
+                 <size>
+                  <width>65</width>
+                  <height>32</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>90</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="minimum">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <number>1000</number>
+                </property>
+                <property name="value">
+                 <number>10</number>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="4">
+               <widget class="QLabel" name="labelReferenceLevel">
+                <property name="text"><string>参考电平：</string></property>
+               </widget>
+              </item>
+              <item row="0" column="5">
+               <widget class="QDoubleSpinBox" name="referenceLevelSpinBox">
+                <property name="suffix"><string> dBFS</string></property>
+                <property name="minimum"><double>-200.000000000000000</double></property>
+                <property name="maximum"><double>50.000000000000000</double></property>
+                <property name="value"><double>0.000000000000000</double></property>
+               </widget>
+              </item>
+              <item row="1" column="4">
+               <widget class="QLabel" name="labelWaterfallRange">
+                <property name="text"><string>瀑布范围：</string></property>
+               </widget>
+              </item>
+              <item row="1" column="5">
+               <widget class="QDoubleSpinBox" name="waterfallMinSpinBox">
+                <property name="prefix"><string>低 </string></property>
+                <property name="suffix"><string> dBFS</string></property>
+                <property name="minimum"><double>-200.000000000000000</double></property>
+                <property name="maximum"><double>0.000000000000000</double></property>
+                <property name="value"><double>-125.000000000000000</double></property>
+               </widget>
+              </item>
+              <item row="1" column="6">
+               <widget class="QDoubleSpinBox" name="waterfallMaxSpinBox">
+                <property name="prefix"><string>高 </string></property>
+                <property name="suffix"><string> dBFS</string></property>
+                <property name="minimum"><double>-200.000000000000000</double></property>
+                <property name="maximum"><double>50.000000000000000</double></property>
+                <property name="value"><double>-20.000000000000000</double></property>
+               </widget>
+              </item>
+              <item row="1" column="7">
+               <spacer name="spectrumControlsSpacer">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="0" column="6">
+               <widget class="QPushButton" name="saveScreenshotButton">
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>截图保存</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QSplitter" name="displaySplitter">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="childrenCollapsible">
+               <bool>false</bool>
+              </property>
+              <widget class="QFrame" name="spectrumPlaceholder">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>250</height>
+                </size>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::Shape::StyledPanel</enum>
+               </property>
+               <property name="plotArea" stdset="0">
+                <bool>true</bool>
+               </property>
+               <layout class="QVBoxLayout" name="spectrumPlaceholderLayout">
+                <item>
+                 <widget class="QLabel" name="spectrumPlaceholderLabel">
+                  <property name="text">
+                   <string>频谱图占位区\n后续提升为 QCustomPlot 或自定义绘图控件\n纵轴：幅度（dBFS）   横轴：频率（MHz）</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignmentFlag::AlignCenter</set>
+                  </property>
+                  <property name="plotTitle" stdset="0">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QFrame" name="waterfallPlaceholder">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>170</height>
+                </size>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::Shape::StyledPanel</enum>
+               </property>
+               <property name="plotArea" stdset="0">
+                <bool>true</bool>
+               </property>
+               <layout class="QHBoxLayout" name="waterfallPlaceholderLayout">
+                <item>
+                 <widget class="QFrame" name="colorScalePlaceholder">
+                  <property name="minimumSize">
+                   <size>
+                    <width>10</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>5</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background:qlineargradient(x1:0,y1:1,x2:0,y2:0, stop:0 #091dff, stop:0.35 #00d8ff, stop:0.58 #21ed45, stop:0.78 #ffe300, stop:1 #ff1b00); border:1px solid #728096;</string>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::Shape::StyledPanel</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="waterfallPlaceholderLabel">
+                  <property name="text">
+                   <string>瀑布图占位区\n时间 × 频率 × 功率颜色</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignmentFlag::AlignCenter</set>
+                  </property>
+                  <property name="plotTitle" stdset="0">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QFrame" name="timeDomainPlaceholder">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>150</height>
+                </size>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::Shape::StyledPanel</enum>
+               </property>
+               <property name="plotArea" stdset="0">
+                <bool>true</bool>
+               </property>
+               <layout class="QVBoxLayout" name="timeDomainPlaceholderLayout">
+                <item>
+                 <widget class="QLabel" name="timeDomainPlaceholderLabel">
+                  <property name="text">
+                   <string>时域波形占位区\n纵轴：归一化幅度   横轴：时间</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignmentFlag::AlignCenter</set>
+                  </property>
+                  <property name="plotTitle" stdset="0">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="timeDomainTab">
+           <attribute name="title">
+            <string>时域图</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="timeDomainTabLayout">
+            <item>
+             <widget class="QLabel" name="timeDomainTabLabel">
+              <property name="text">
+               <string>独立时域分析页面（预留）</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="constellationTab">
+           <attribute name="title">
+            <string>星座图</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="constellationTabLayout">
+            <item>
+             <widget class="QLabel" name="constellationTabLabel">
+              <property name="text">
+               <string>星座图 / EVM 页面（后续阶段）</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="parameterInfoTab">
+           <attribute name="title">
+            <string>参数信息</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="parameterInfoTabLayout">
+            <item>
+             <widget class="QLabel" name="parameterInfoTabLabel">
+              <property name="text">
+               <string>设备与采集参数详情页面（预留）</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QScrollArea" name="rightScrollArea">
+       <property name="minimumSize">
+        <size>
+         <width>280</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>380</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="rightPanel">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>318</width>
+          <height>914</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="rightPanelLayout">
+         <property name="spacing">
+          <number>8</number>
+         </property>
+         <property name="leftMargin">
+          <number>4</number>
+         </property>
+         <property name="topMargin">
+          <number>4</number>
+         </property>
+         <property name="rightMargin">
+          <number>4</number>
+         </property>
+         <property name="bottomMargin">
+          <number>4</number>
+         </property>
+         <item>
+          <widget class="QGroupBox" name="acquisitionInfoGroupBox">
+           <property name="title">
+            <string>采集信息</string>
+           </property>
+           <layout class="QFormLayout" name="acquisitionInfoLayout">
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelActualCenter">
+              <property name="text">
+               <string>中心频率：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="actualCenterValueLabel">
+              <property name="text">
+               <string>-- MHz</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelActualRate">
+              <property name="text">
+               <string>实际采样率：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="actualRateValueLabel">
+              <property name="text">
+               <string>-- MSps</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="labelActualBandwidth">
+              <property name="text">
+               <string>实际带宽：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="actualBandwidthValueLabel">
+              <property name="text">
+               <string>-- MHz</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="labelReceiveRate">
+              <property name="text">
+               <string>接收数据率：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="receiveRateValueLabel">
+              <property name="text">
+               <string>-- MB/s</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="labelReceivedData">
+              <property name="text">
+               <string>已采集数据：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLabel" name="receivedDataValueLabel">
+              <property name="text">
+               <string>0 B</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="labelRunningTime">
+              <property name="text">
+               <string>运行时间：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLabel" name="runningTimeValueLabel">
+              <property name="text">
+               <string>00:00:00</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="metadataGroupBox">
+           <property name="title">
+            <string>元数据显示</string>
+           </property>
+           <layout class="QVBoxLayout" name="metadataLayout">
+            <item>
+             <widget class="QTableWidget" name="metadataTableWidget">
+              <property name="alternatingRowColors">
+               <bool>true</bool>
+              </property>
+              <property name="rowCount">
+               <number>8</number>
+              </property>
+              <property name="columnCount">
+               <number>2</number>
+              </property>
+              <row>
+               <property name="text">
+                <string>时间戳</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>中心频率</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>采样率</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>带宽</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>增益</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>通道</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>数据格式</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>FFT 点数</string>
+               </property>
+              </row>
+              <column>
+               <property name="text">
+                <string>参数</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>值</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="logGroupBox">
+           <property name="title">
+            <string>日志管理</string>
+           </property>
+           <layout class="QVBoxLayout" name="logLayout">
+            <item>
+             <widget class="QPlainTextEdit" name="logPlainTextEdit">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="plainText">
+               <string>[系统] 等待查找并连接设备...\n[提示] 频谱、瀑布图和时域图当前为 UI 占位区</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="logButtonsLayout">
+              <item>
+               <spacer name="logButtonSpacer">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="clearLogButton">
+                <property name="text">
+                 <string>清空</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <spacer name="rightVerticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Vertical</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Policy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1548</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuDevice">
+    <property name="title">
+     <string>设备</string>
+    </property>
+    <addaction name="actionFindDevices"/>
+    <addaction name="actionConnectDevice"/>
+    <addaction name="actionDisconnectDevice"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>视图</string>
+    </property>
+    <addaction name="actionResetLayout"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>工具</string>
+    </property>
+    <addaction name="actionSettings"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>帮助</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuDevice"/>
+   <addaction name="menuView"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar">
+   <widget class="QLabel" name="systemStatusLabel">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>191</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>0</width>
+      <height>20</height>
+     </size>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>16777215</width>
+      <height>20</height>
+     </size>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">color:#30dd78; padding:1px 12px;</string>
+    </property>
+    <property name="text">
+     <string>● 系统运行正常</string>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
+    </property>
+   </widget>
+  </widget>
+  <action name="actionStartReceive">
+   <property name="text">
+    <string>开始接收</string>
+   </property>
+   <property name="toolTip">
+    <string>开始实时接收</string>
+   </property>
+  </action>
+  <action name="actionStopReceive">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>停止采集</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>参数配置</string>
+   </property>
+  </action>
+  <action name="actionTimedAcquisition">
+   <property name="text">
+    <string>定长采集</string>
+   </property>
+  </action>
+  <action name="actionOpenData">
+   <property name="text">
+    <string>打开数据</string>
+   </property>
+  </action>
+  <action name="actionSaveData">
+   <property name="text">
+    <string>保存数据</string>
+   </property>
+  </action>
+  <action name="actionShowLog">
+   <property name="text">
+    <string>日志管理</string>
+   </property>
+  </action>
+  <action name="actionFindDevices">
+   <property name="text">
+    <string>查找设备</string>
+   </property>
+  </action>
+  <action name="actionConnectDevice">
+   <property name="text">
+    <string>连接设备</string>
+   </property>
+  </action>
+  <action name="actionDisconnectDevice">
+   <property name="text">
+    <string>断开设备</string>
+   </property>
+  </action>
+  <action name="actionResetLayout">
+   <property name="text">
+    <string>恢复默认布局</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>关于</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>
