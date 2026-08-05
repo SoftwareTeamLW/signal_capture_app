@@ -20,5 +20,7 @@ struct RxConfig
     bool averageEnabled = false;
     int averageCount = 10;
     bool maxHoldEnabled = false;
+    bool minHoldEnabled = false;
     bool currentTraceVisible = true;
+    double inputCompensationDb = 0.0;
 };

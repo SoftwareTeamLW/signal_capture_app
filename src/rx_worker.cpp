@@ -100,7 +100,9 @@ void RxWorker::startReceiving()
                     next.window != config_.window;
                 const bool holdModeChanged =
                     next.averageEnabled != config_.averageEnabled ||
-                    next.maxHoldEnabled != config_.maxHoldEnabled;
+                    next.maxHoldEnabled != config_.maxHoldEnabled ||
+                    next.minHoldEnabled != config_.minHoldEnabled ||
+                    next.inputCompensationDb != config_.inputCompensationDb;
                 if (next.sampleRate != config_.sampleRate) {
                     usrp_->set_rx_rate(next.sampleRate, channel);
                     actualRate = usrp_->get_rx_rate(channel);
@@ -160,9 +162,11 @@ void RxWorker::startReceiving()
                     const SpectrumFrame frame = spectrumProcessor_.process(
                         fftI, fftQ, config_.fftSize, config_.window,
                         config_.averageEnabled, config_.averageCount,
-                        config_.maxHoldEnabled);
+                        config_.maxHoldEnabled, config_.minHoldEnabled,
+                        static_cast<float>(config_.inputCompensationDb));
                     emit displayFrameReady(fftI, frame.currentDb, frame.averageDb,
-                                           frame.maxHoldDb, actualRate, actualFrequency);
+                                           frame.maxHoldDb, frame.minHoldDb,
+                                           actualRate, actualFrequency);
                     fftI.clear();
                     fftQ.clear();
                     lastPreviewTime = now;

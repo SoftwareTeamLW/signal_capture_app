@@ -25,9 +25,11 @@ public:
     explicit SpectrumWidget(QWidget* parent = nullptr);
     void setReferenceLevel(float referenceLevelDb);
     void setCurrentTraceVisible(bool visible);
+    void setMarkerCount(int count);
     void setSpectrum(const QVector<float>& currentDb,
                      const QVector<float>& averageDb,
                      const QVector<float>& maxHoldDb,
+                     const QVector<float>& minHoldDb,
                      double sampleRate,
                      double centerFrequency);
 
@@ -38,10 +40,12 @@ private:
     QVector<float> currentDb_;
     QVector<float> averageDb_;
     QVector<float> maxHoldDb_;
+    QVector<float> minHoldDb_;
     double sampleRate_ = 0.0;
     double centerFrequency_ = 0.0;
     float referenceLevelDb_ = 0.0f;
     bool currentTraceVisible_ = true;
+    int markerCount_ = 0;
 };
 
 class WaterfallWidget final : public QWidget

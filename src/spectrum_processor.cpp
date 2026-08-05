@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <limits>
 
 namespace {
 constexpr float kPi = 3.14159265358979323846f;
@@ -61,7 +62,9 @@ SpectrumFrame SpectrumProcessor::process(const QVector<float>& iSamples,
                                          WindowFunction window,
                                          bool averageEnabled,
                                          int averageCount,
-                                         bool maxHoldEnabled)
+                                         bool maxHoldEnabled,
+                                         bool minHoldEnabled,
+                                         float inputCompensationDb)
 {
     const qsizetype available = std::min(iSamples.size(), qSamples.size());
     const qsizetype fftSize = std::min<qsizetype>(available, requestedFftSize);
@@ -76,20 +79,22 @@ SpectrumFrame SpectrumProcessor::process(const QVector<float>& iSamples,
 
     if (averagePower_.size() != fftSize) {
         averagePower_.fill(0.0f, fftSize);
-        maxHoldDb_.fill(-200.0f, fftSize);
+        maxHoldDb_.fill(-std::numeric_limits<float>::infinity(), fftSize);
+        minHoldDb_.fill(std::numeric_limits<float>::infinity(), fftSize);
     }
 
     SpectrumFrame frame;
     frame.currentDb.resize(fftSize);
     if (averageEnabled) frame.averageDb.resize(fftSize);
     if (maxHoldEnabled) frame.maxHoldDb.resize(fftSize);
+    if (minHoldEnabled) frame.minHoldDb.resize(fftSize);
     // 把界面中的“平均次数”换成指数平均系数。N 越大，曲线越稳定。
     const float alpha = 2.0f / float(std::max(1, averageCount) + 1);
     for (qsizetype i = 0; i < fftSize; ++i) {
         const qsizetype shifted = (i + fftSize / 2) % fftSize;
         const float magnitude = std::abs(data[shifted]) / float(fftSize);
         const float power = std::max(magnitude * magnitude, 1.0e-20f);
-        const float currentDb = 10.0f * std::log10(power);
+        const float currentDb = 10.0f * std::log10(power) + inputCompensationDb;
         if (averageEnabled) {
             averagePower_[i] = averagePower_[i] == 0.0f
                 ? power : alpha * power + (1.0f - alpha) * averagePower_[i];
@@ -100,9 +105,13 @@ SpectrumFrame SpectrumProcessor::process(const QVector<float>& iSamples,
             ? std::max(maxHoldDb_[i], currentDb) : currentDb;
         frame.currentDb[i] = currentDb;
         if (averageEnabled)
-            frame.averageDb[i] = 10.0f * std::log10(averagePower_[i]);
+            frame.averageDb[i] = 10.0f * std::log10(averagePower_[i]) + inputCompensationDb;
         if (maxHoldEnabled)
             frame.maxHoldDb[i] = maxHoldDb_[i];
+        minHoldDb_[i] = minHoldEnabled
+            ? std::min(minHoldDb_[i], currentDb) : currentDb;
+        if (minHoldEnabled)
+            frame.minHoldDb[i] = minHoldDb_[i];
     }
     return frame;
 }
@@ -111,4 +120,5 @@ void SpectrumProcessor::reset()
 {
     averagePower_.clear();
     maxHoldDb_.clear();
+    minHoldDb_.clear();
 }

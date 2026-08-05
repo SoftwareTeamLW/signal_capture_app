@@ -42,6 +42,7 @@ signals:
                            const QVector<float>& currentDb,
                            const QVector<float>& averageDb,
                            const QVector<float>& maxHoldDb,
+                           const QVector<float>& minHoldDb,
                            double sampleRate,
                            double centerFrequency);
 

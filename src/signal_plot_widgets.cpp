@@ -17,6 +17,8 @@ const QColor kText(205, 205, 205);
 const QColor kCurrent(255, 222, 45);       // 主流频谱仪风格：实时迹线为黄色
 const QColor kAverage(55, 205, 255, 210);  // 平均：青蓝色
 const QColor kMaxHold(255, 72, 72, 220);   // Max Hold：红色
+const QColor kMinHold(184, 105, 255, 220); // Min Hold：紫色
+const QColor kMarker(255, 255, 255);
 constexpr float kTopDb = 0.0f;
 constexpr float kBottomDb = -140.0f;
 
@@ -155,14 +157,22 @@ void SpectrumWidget::setCurrentTraceVisible(bool visible)
     update();
 }
 
+void SpectrumWidget::setMarkerCount(int count)
+{
+    markerCount_ = std::clamp(count, 0, 4);
+    update();
+}
+
 void SpectrumWidget::setSpectrum(const QVector<float>& currentDb,
                                  const QVector<float>& averageDb,
                                  const QVector<float>& maxHoldDb,
+                                 const QVector<float>& minHoldDb,
                                  double sampleRate, double centerFrequency)
 {
     currentDb_ = currentDb;
     averageDb_ = averageDb;
     maxHoldDb_ = maxHoldDb;
+    minHoldDb_ = minHoldDb;
     sampleRate_ = sampleRate;
     centerFrequency_ = centerFrequency;
     update();
@@ -187,6 +197,10 @@ void SpectrumWidget::paintEvent(QPaintEvent*)
         painter.setPen(QPen(kMaxHold, 0.8));
         painter.drawPath(tracePath(maxHoldDb_, area, float(top)));
     }
+    if (!minHoldDb_.isEmpty()) {
+        painter.setPen(QPen(kMinHold, 0.8));
+        painter.drawPath(tracePath(minHoldDb_, area, float(top)));
+    }
     if (!averageDb_.isEmpty()) {
         painter.setPen(QPen(kAverage, 0.8));
         painter.drawPath(tracePath(averageDb_, area, float(top)));
@@ -204,22 +218,43 @@ void SpectrumWidget::paintEvent(QPaintEvent*)
             .arg(centerFrequency_ / 1e6, 0, 'f', 3)
             .arg(sampleRate_ / 1e6, 0, 'f', 3)
             .arg(currentDb_.size()));
-    if (currentTraceVisible_) {
-        const auto peak = std::max_element(currentDb_.cbegin(), currentDb_.cend());
-        const qsizetype peakIndex = std::distance(currentDb_.cbegin(), peak);
+    if (markerCount_ > 0) {
+        // 从强到弱选择局部峰值，并保持一定间隔，避免四个 Marker 全挤在同一主瓣。
+        QVector<qsizetype> candidates;
+        for (qsizetype i = 1; i + 1 < currentDb_.size(); ++i) {
+            if (currentDb_[i] >= currentDb_[i - 1] && currentDb_[i] >= currentDb_[i + 1])
+                candidates.push_back(i);
+        }
+        std::sort(candidates.begin(), candidates.end(), [this](qsizetype a, qsizetype b) {
+            return currentDb_[a] > currentDb_[b];
+        });
+        QVector<qsizetype> selected;
+        const qsizetype guard = std::max<qsizetype>(2, currentDb_.size() / 100);
+        for (qsizetype candidate : candidates) {
+            bool separated = true;
+            for (qsizetype used : selected)
+                if (std::abs(candidate - used) < guard) separated = false;
+            if (separated) selected.push_back(candidate);
+            if (selected.size() >= markerCount_) break;
+        }
+        for (qsizetype marker = 0; marker < selected.size(); ++marker) {
+            const qsizetype peakIndex = selected[marker];
+            const float peakValue = currentDb_[peakIndex];
         const qreal peakX = area.left() + peakIndex * area.width() /
             qreal(currentDb_.size() - 1);
-        const qreal peakY = dbToY(*peak, area, float(top));
+        const qreal peakY = dbToY(peakValue, area, float(top));
         const double peakHz = centerFrequency_ - sampleRate_ / 2.0 +
             peakIndex * sampleRate_ / double(currentDb_.size() - 1);
-        painter.setBrush(kCurrent);
-        painter.setPen(Qt::NoPen);
-        painter.drawEllipse(QPointF(peakX, peakY), 2.5, 2.5);
-        painter.setPen(kText);
-        painter.drawText(area.right() - 210, 20,
-            tr("PEAK %1 MHz  %2 dBFS")
+            painter.setBrush(kMarker);
+            painter.setPen(kMarker);
+            painter.drawEllipse(QPointF(peakX, peakY), 2.5, 2.5);
+            painter.drawText(QPointF(peakX + 4, peakY - 4), tr("M%1").arg(marker + 1));
+            painter.drawText(area.right() - 245, 20 + int(marker) * 15,
+            tr("M%1  %2 MHz  %3 dBFS")
+                .arg(marker + 1)
                 .arg(peakHz / 1e6, 0, 'f', 6)
-                .arg(*peak, 0, 'f', 1));
+                .arg(peakValue, 0, 'f', 1));
+        }
     }
 }
 

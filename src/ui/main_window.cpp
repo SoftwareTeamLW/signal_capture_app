@@ -8,6 +8,7 @@
 
 #include <QAbstractButton>
 #include <QAction>
+#include <QCoreApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDoubleSpinBox>
@@ -76,6 +77,17 @@ MainWindow::MainWindow(QWidget* parent)
     ui->displaySplitter->setStretchFactor(2, 1);
     ui->displaySplitter->setSizes({320, 210, 140});
 
+    // Logo 不编译进程序：客户只需替换可执行文件旁 assets/company_logo.png。
+    const QString logoPath = QCoreApplication::applicationDirPath()
+        + QStringLiteral("/assets/company_logo.png");
+    const QPixmap companyLogo(logoPath);
+    if (!companyLogo.isNull()) {
+        ui->companyLogoLabel->setText(QString());
+        ui->companyLogoLabel->setPixmap(companyLogo.scaled(
+            std::max(160, ui->companyLogoLabel->width()), 72,
+            Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    }
+
     // 正式仪表控件采用 Qt 栅格绘制；无独显、远程桌面和软件渲染均可工作。
     spectrumWidget_ = new SpectrumWidget(ui->spectrumPlaceholder);
     waterfallWidget_ = new WaterfallWidget(ui->waterfallPlaceholder);
@@ -129,6 +141,9 @@ MainWindow::MainWindow(QWidget* parent)
             this, runtimeChanged);
     connect(ui->averageCheckBox, &QCheckBox::toggled, this, runtimeChanged);
     connect(ui->maxHoldCheckBox, &QCheckBox::toggled, this, runtimeChanged);
+    connect(ui->minHoldCheckBox, &QCheckBox::toggled, this, runtimeChanged);
+    connect(ui->inputCompensationSpinBox,
+            qOverload<double>(&QDoubleSpinBox::valueChanged), this, runtimeChanged);
     connect(ui->averageCountSpinBox, qOverload<int>(&QSpinBox::valueChanged),
             this, runtimeChanged);
     connect(ui->referenceLevelSpinBox, qOverload<double>(&QDoubleSpinBox::valueChanged),
@@ -137,6 +152,8 @@ MainWindow::MainWindow(QWidget* parent)
     });
     connect(ui->currentTraceCheckBox, &QCheckBox::toggled,
             spectrumWidget_, &SpectrumWidget::setCurrentTraceVisible);
+    connect(ui->markerCountSpinBox, qOverload<int>(&QSpinBox::valueChanged),
+            spectrumWidget_, &SpectrumWidget::setMarkerCount);
     const auto waterfallRangeChanged = [this]() {
         waterfallWidget_->setColorRange(
             static_cast<float>(ui->waterfallMinSpinBox->value()),
@@ -149,6 +166,7 @@ MainWindow::MainWindow(QWidget* parent)
     spectrumWidget_->setReferenceLevel(
         static_cast<float>(ui->referenceLevelSpinBox->value()));
     spectrumWidget_->setCurrentTraceVisible(ui->currentTraceCheckBox->isChecked());
+    spectrumWidget_->setMarkerCount(ui->markerCountSpinBox->value());
     waterfallRangeChanged();
 
     // 所有可点击按钮使用手型光标，增强可操作性反馈。
@@ -332,10 +350,12 @@ void MainWindow::startReceiving()
                          const QVector<float>& current,
                          const QVector<float>& average,
                          const QVector<float>& maxHold,
+                         const QVector<float>& minHold,
                          double rate, double frequency) {
         ++displayFrameCount_;
         waveformWidget_->setSamples(i, rate);
-        spectrumWidget_->setSpectrum(current, average, maxHold, rate, frequency);
+        spectrumWidget_->setSpectrum(current, average, maxHold, minHold,
+                                     rate, frequency);
         waterfallWidget_->appendSpectrum(current);
     });
     connect(rxWorker_, &RxWorker::receptionStopped,
@@ -354,7 +374,7 @@ void MainWindow::startReceiving()
     ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ffba4a;"));
     appendLog(tr("参数"),
               tr("Center=%1 MHz, Rate=%2 MSps, BW=%3 MHz, Gain=%4 dB, "
-                 "FFT=%5, Window=%6, Average=%7, MaxHold=%8")
+                 "FFT=%5, Window=%6, Average=%7, MaxHold=%8, MinHold=%9, Comp=%10 dB")
                   .arg(config.centerFrequencyHz / 1e6, 0, 'f', 6)
                   .arg(config.sampleRate / 1e6, 0, 'f', 3)
                   .arg(config.bandwidthHz / 1e6, 0, 'f', 3)
@@ -362,7 +382,9 @@ void MainWindow::startReceiving()
                   .arg(config.fftSize)
                   .arg(ui->windowFunctionComboBox->currentText())
                   .arg(config.averageEnabled ? tr("开") : tr("关"))
-                  .arg(config.maxHoldEnabled ? tr("开") : tr("关")));
+                  .arg(config.maxHoldEnabled ? tr("开") : tr("关"))
+                  .arg(config.minHoldEnabled ? tr("开") : tr("关"))
+                  .arg(config.inputCompensationDb, 0, 'f', 2));
     rxThread_->start();
 }
 
@@ -542,7 +564,9 @@ RxConfig MainWindow::currentRxConfig() const
     config.averageEnabled = ui->averageCheckBox->isChecked();
     config.averageCount = ui->averageCountSpinBox->value();
     config.maxHoldEnabled = ui->maxHoldCheckBox->isChecked();
+    config.minHoldEnabled = ui->minHoldCheckBox->isChecked();
     config.currentTraceVisible = ui->currentTraceCheckBox->isChecked();
+    config.inputCompensationDb = ui->inputCompensationSpinBox->value();
     return config;
 }
 

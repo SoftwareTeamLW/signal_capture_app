@@ -164,6 +164,16 @@ QDoubleSpinBox:focus {
           <number>4</number>
          </property>
          <item>
+          <widget class="QLabel" name="companyLogoLabel">
+           <property name="minimumSize"><size><width>0</width><height>72</height></size></property>
+           <property name="maximumSize"><size><width>16777215</width><height>90</height></size></property>
+           <property name="styleSheet"><string notr="true">background:#111722;border:1px dashed #4b5b70;border-radius:7px;color:#8291a6;</string></property>
+           <property name="text"><string>COMPANY LOGO</string></property>
+           <property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property>
+           <property name="scaledContents"><bool>false</bool></property>
+          </widget>
+         </item>
+         <item>
           <widget class="QGroupBox" name="deviceStatusGroupBox">
            <property name="title">
             <string>设备连接状态</string>
@@ -214,7 +224,7 @@ QDoubleSpinBox:focus {
             <item row="3" column="0">
              <widget class="QLabel" name="labelConnectionArgsValue">
               <property name="text">
-               <string>连接参数：</string>
+               <string>已用参数：</string>
               </property>
              </widget>
             </item>
@@ -273,7 +283,18 @@ QDoubleSpinBox:focus {
               </property>
              </widget>
             </item>
-            <item row="7" column="0" colspan="2">
+            <item row="7" column="0">
+             <widget class="QLabel" name="labelConnectionArgs">
+              <property name="text"><string>指定参数：</string></property>
+             </widget>
+            </item>
+            <item row="7" column="1">
+             <widget class="QLineEdit" name="connectionArgsEdit">
+              <property name="placeholderText"><string>serial=... / type=x300,addr=...</string></property>
+              <property name="toolTip"><string>等价于 UHD --args，用于从多台 USRP 中指定目标设备。</string></property>
+             </widget>
+            </item>
+            <item row="8" column="0" colspan="2">
              <layout class="QHBoxLayout" name="deviceButtonsLayout">
               <property name="spacing">
                <number>6</number>
@@ -470,26 +491,6 @@ QDoubleSpinBox:focus {
               </property>
               <property name="value">
                <double>20.000000000000000</double>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="labelConnectionArgs">
-              <property name="styleSheet">
-               <string notr="true">padding:2px</string>
-              </property>
-              <property name="text">
-               <string>连接参数：</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="1">
-             <widget class="QLineEdit" name="connectionArgsEdit">
-              <property name="placeholderText">
-               <string>例如 serial=... 或 type=x300,addr=...</string>
               </property>
              </widget>
             </item>
@@ -780,6 +781,27 @@ QDoubleSpinBox:focus {
                 </property>
                </widget>
               </item>
+              <item row="1" column="4">
+               <widget class="QCheckBox" name="minHoldCheckBox">
+                <property name="text"><string>最小保持</string></property>
+                <property name="toolTip"><string>保持每个频点观察到的最低电平；重新开启时清空历史。</string></property>
+               </widget>
+              </item>
+              <item row="1" column="5">
+               <widget class="QLabel" name="labelMarkerCount">
+                <property name="text"><string>Marker：</string></property>
+               </widget>
+              </item>
+              <item row="1" column="6">
+               <widget class="QSpinBox" name="markerCountSpinBox">
+                <property name="minimumSize"><size><width>52</width><height>32</height></size></property>
+                <property name="maximumSize"><size><width>65</width><height>16777215</height></size></property>
+                <property name="minimum"><number>0</number></property>
+                <property name="maximum"><number>4</number></property>
+                <property name="value"><number>0</number></property>
+                <property name="toolTip"><string>显示 0～4 个自动峰值 Marker。</string></property>
+               </widget>
+              </item>
               <item row="1" column="1">
                <widget class="QCheckBox" name="currentTraceCheckBox">
                 <property name="text"><string>实时波形</string></property>
@@ -831,12 +853,12 @@ QDoubleSpinBox:focus {
                 <property name="value"><double>0.000000000000000</double></property>
                </widget>
               </item>
-              <item row="1" column="4">
+              <item row="1" column="7">
                <widget class="QLabel" name="labelWaterfallRange">
                 <property name="text"><string>瀑布范围：</string></property>
                </widget>
               </item>
-              <item row="1" column="5">
+              <item row="1" column="8">
                <widget class="QDoubleSpinBox" name="waterfallMinSpinBox">
                 <property name="prefix"><string>低 </string></property>
                 <property name="suffix"><string> dBFS</string></property>
@@ -845,7 +867,7 @@ QDoubleSpinBox:focus {
                 <property name="value"><double>-125.000000000000000</double></property>
                </widget>
               </item>
-              <item row="1" column="6">
+              <item row="1" column="9">
                <widget class="QDoubleSpinBox" name="waterfallMaxSpinBox">
                 <property name="prefix"><string>高 </string></property>
                 <property name="suffix"><string> dBFS</string></property>
@@ -854,7 +876,7 @@ QDoubleSpinBox:focus {
                 <property name="value"><double>-20.000000000000000</double></property>
                </widget>
               </item>
-              <item row="1" column="7">
+              <item row="1" column="10">
                <spacer name="spectrumControlsSpacer">
                 <property name="orientation">
                  <enum>Qt::Orientation::Horizontal</enum>
@@ -868,6 +890,22 @@ QDoubleSpinBox:focus {
                </spacer>
               </item>
               <item row="0" column="6">
+               <widget class="QLabel" name="labelInputCompensation">
+                <property name="text"><string>输入补偿：</string></property>
+                <property name="toolTip"><string>补偿线缆、衰减器等插损；正值会提高显示电平。</string></property>
+               </widget>
+              </item>
+              <item row="0" column="7">
+               <widget class="QDoubleSpinBox" name="inputCompensationSpinBox">
+                <property name="suffix"><string> dB</string></property>
+                <property name="minimum"><double>-100.000000000000000</double></property>
+                <property name="maximum"><double>100.000000000000000</double></property>
+                <property name="decimals"><number>2</number></property>
+                <property name="value"><double>0.000000000000000</double></property>
+                <property name="toolTip"><string>例如链路插损 6 dB，输入 +6 dB。</string></property>
+               </widget>
+              </item>
+              <item row="0" column="8">
                <widget class="QPushButton" name="saveScreenshotButton">
                 <property name="minimumSize">
                  <size>
