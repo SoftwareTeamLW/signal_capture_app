@@ -188,17 +188,39 @@ void SpectrumWidget::setMarkerTracking(int marker, bool enabled)
     markers_[marker].tracking = enabled;
 }
 
-QVector<qsizetype> SpectrumWidget::peakCandidates() const
+void SpectrumWidget::setMarkerTrace(int marker, MarkerTrace trace)
 {
+    if (marker < 0 || marker >= int(markers_.size())) return;
+    markers_[marker].trace = trace;
+    markers_[marker].peakRank = 0;
+    update();
+}
+
+const QVector<float>& SpectrumWidget::markerTraceValues(int marker) const
+{
+    static const QVector<float> empty;
+    if (marker < 0 || marker >= int(markers_.size())) return empty;
+    switch (markers_[marker].trace) {
+    case MarkerTrace::Current: return currentDb_;
+    case MarkerTrace::Average: return averageDb_;
+    case MarkerTrace::MaxHold: return maxHoldDb_;
+    case MarkerTrace::MinHold: return minHoldDb_;
+    }
+    return empty;
+}
+
+QVector<qsizetype> SpectrumWidget::peakCandidates(int marker) const
+{
+    const QVector<float>& values = markerTraceValues(marker);
     QVector<qsizetype> result;
-    for (qsizetype i = 1; i + 1 < currentDb_.size(); ++i)
-        if (currentDb_[i] >= currentDb_[i - 1] && currentDb_[i] >= currentDb_[i + 1])
+    for (qsizetype i = 1; i + 1 < values.size(); ++i)
+        if (values[i] >= values[i - 1] && values[i] >= values[i + 1])
             result.push_back(i);
-    std::sort(result.begin(), result.end(), [this](qsizetype a, qsizetype b) {
-        return currentDb_[a] > currentDb_[b];
+    std::sort(result.begin(), result.end(), [&values](qsizetype a, qsizetype b) {
+        return values[a] > values[b];
     });
     QVector<qsizetype> separated;
-    const qsizetype guard = std::max<qsizetype>(2, currentDb_.size() / 100);
+    const qsizetype guard = std::max<qsizetype>(2, values.size() / 100);
     for (qsizetype candidate : result) {
         bool usable = true;
         for (qsizetype used : separated)
@@ -250,10 +272,16 @@ bool SpectrumWidget::markerTracking(int marker) const
     return marker >= 0 && marker < int(markers_.size()) && markers_[marker].tracking;
 }
 
+SpectrumWidget::MarkerTrace SpectrumWidget::markerTrace(int marker) const
+{
+    return marker >= 0 && marker < int(markers_.size())
+        ? markers_[marker].trace : MarkerTrace::Current;
+}
+
 void SpectrumWidget::peakSearch(int marker)
 {
     if (marker < 0 || marker >= int(markers_.size())) return;
-    const auto candidates = peakCandidates();
+    const auto candidates = peakCandidates(marker);
     if (candidates.isEmpty()) return;
     markers_[marker].peakRank = 0;
     markers_[marker].frequencyHz = indexToFrequency(candidates.front());
@@ -264,7 +292,7 @@ void SpectrumWidget::peakSearch(int marker)
 void SpectrumWidget::nextPeak(int marker)
 {
     if (marker < 0 || marker >= int(markers_.size())) return;
-    const auto candidates = peakCandidates();
+    const auto candidates = peakCandidates(marker);
     if (candidates.isEmpty()) return;
     markers_[marker].peakRank = (markers_[marker].peakRank + 1) % candidates.size();
     markers_[marker].frequencyHz = indexToFrequency(candidates[markers_[marker].peakRank]);
@@ -291,16 +319,18 @@ void SpectrumWidget::setSpectrum(const QVector<float>& currentDb,
     for (int marker = 0; currentDb_.size() >= 3 && marker < int(markers_.size()); ++marker) {
         auto& state = markers_[marker];
         if (!state.enabled || !state.tracking || state.frequencyHz == 0.0) continue;
+        const QVector<float>& values = markerTraceValues(marker);
+        if (values.size() < 3) continue;
         const double start = centerFrequency_ - sampleRate_ / 2.0;
         const double stop = centerFrequency_ + sampleRate_ / 2.0;
         if (state.frequencyHz < start || state.frequencyHz > stop) continue;
         const qsizetype center = frequencyToIndex(state.frequencyHz);
-        const qsizetype radius = std::max<qsizetype>(3, currentDb_.size() / 50);
+        const qsizetype radius = std::max<qsizetype>(3, values.size() / 50);
         const qsizetype begin = std::max<qsizetype>(1, center - radius);
-        const qsizetype end = std::min<qsizetype>(currentDb_.size() - 2, center + radius);
+        const qsizetype end = std::min<qsizetype>(values.size() - 2, center + radius);
         qsizetype best = begin;
         for (qsizetype i = begin + 1; i <= end; ++i)
-            if (currentDb_[i] > currentDb_[best]) best = i;
+            if (values[i] > values[best]) best = i;
         const double trackedFrequency = indexToFrequency(best);
         if (trackedFrequency != state.frequencyHz) {
             state.frequencyHz = trackedFrequency;
@@ -369,8 +399,10 @@ void SpectrumWidget::paintEvent(QPaintEvent*)
         const double start = centerFrequency_ - sampleRate_ / 2.0;
         const double stop = centerFrequency_ + sampleRate_ / 2.0;
         if (!state.enabled || state.frequencyHz < start || state.frequencyHz > stop) continue;
+        const QVector<float>& values = markerTraceValues(marker);
+        if (values.size() != currentDb_.size()) continue;
         const qsizetype peakIndex = frequencyToIndex(state.frequencyHz);
-        const float peakValue = currentDb_[peakIndex];
+        const float peakValue = values[peakIndex];
         const qreal peakX = area.left() + peakIndex * area.width() /
             qreal(currentDb_.size() - 1);
         const qreal peakY = dbToY(peakValue, area, float(top));

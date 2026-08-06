@@ -25,6 +25,13 @@ private:
 class SpectrumWidget final : public QWidget
 {
 public:
+    enum class MarkerTrace {
+        Current = 0,
+        Average,
+        MaxHold,
+        MinHold
+    };
+
     explicit SpectrumWidget(QWidget* parent = nullptr);
     void setReferenceLevel(float referenceLevelDb);
     void setCurrentTraceVisible(bool visible);
@@ -32,11 +39,13 @@ public:
     void setMarkerEnabled(int marker, bool enabled);
     void setMarkerFrequency(int marker, double frequencyHz);
     void setMarkerTracking(int marker, bool enabled);
+    void setMarkerTrace(int marker, MarkerTrace trace);
     void peakSearch(int marker);
     void nextPeak(int marker);
     double markerFrequency(int marker) const;
     bool markerEnabled(int marker) const;
     bool markerTracking(int marker) const;
+    MarkerTrace markerTrace(int marker) const;
     void setMarkerChangedCallback(std::function<void(int, double)> callback);
     void setSpectrum(const QVector<float>& currentDb,
                      const QVector<float>& averageDb,
@@ -63,8 +72,10 @@ private:
         bool tracking = false;
         double frequencyHz = 0.0;
         int peakRank = 0;
+        MarkerTrace trace = MarkerTrace::Current;
     };
-    QVector<qsizetype> peakCandidates() const;
+    const QVector<float>& markerTraceValues(int marker) const;
+    QVector<qsizetype> peakCandidates(int marker) const;
     qsizetype frequencyToIndex(double frequencyHz) const;
     double indexToFrequency(qsizetype index) const;
     void notifyMarkerChanged(int marker);

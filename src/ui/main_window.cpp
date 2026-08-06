@@ -22,6 +22,7 @@
 #include <QLabel>
 #include <QList>
 #include <QMessageBox>
+#include <QSplitter>
 #include <QString>
 #include <QTime>
 #include <QtConcurrent/QtConcurrentRun>
@@ -71,7 +72,13 @@ MainWindow::MainWindow(QWidget* parent)
     ui->mainSplitter->setStretchFactor(0, 0);
     ui->mainSplitter->setStretchFactor(1, 1);
     ui->mainSplitter->setStretchFactor(2, 0);
-    ui->mainSplitter->setSizes({290, 600, 310});
+    ui->mainSplitter->setSizes({250, 940, 260});
+
+    for (int handleIndex = 1;
+         handleIndex < ui->mainSplitter->count();
+         ++handleIndex) {
+        ui->mainSplitter->handle(handleIndex)->setEnabled(false);
+    }
 
     ui->displaySplitter->setChildrenCollapsible(false);
     ui->displaySplitter->setStretchFactor(0, 3);
@@ -161,9 +168,12 @@ MainWindow::MainWindow(QWidget* parent)
         const QSignalBlocker blockEnable(ui->markerEnableCheckBox);
         const QSignalBlocker blockFrequency(ui->markerFrequencySpinBox);
         const QSignalBlocker blockTrack(ui->markerTrackCheckBox);
+        const QSignalBlocker blockTrace(ui->markerTraceComboBox);
         ui->markerEnableCheckBox->setChecked(spectrumWidget_->markerEnabled(marker));
         ui->markerFrequencySpinBox->setValue(spectrumWidget_->markerFrequency(marker) / 1e6);
         ui->markerTrackCheckBox->setChecked(spectrumWidget_->markerTracking(marker));
+        ui->markerTraceComboBox->setCurrentIndex(
+            static_cast<int>(spectrumWidget_->markerTrace(marker)));
     };
     connect(ui->markerSelectComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
             this, [loadSelectedMarker](int) { loadSelectedMarker(); });
@@ -176,6 +186,12 @@ MainWindow::MainWindow(QWidget* parent)
     });
     connect(ui->markerTrackCheckBox, &QCheckBox::toggled, this, [this](bool enabled) {
         spectrumWidget_->setMarkerTracking(ui->markerSelectComboBox->currentIndex(), enabled);
+    });
+    connect(ui->markerTraceComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, [this](int index) {
+        spectrumWidget_->setMarkerTrace(
+            ui->markerSelectComboBox->currentIndex(),
+            static_cast<SpectrumWidget::MarkerTrace>(index));
     });
     connect(ui->markerPeakButton, &QPushButton::clicked, this, [this]() {
         const int marker = ui->markerSelectComboBox->currentIndex();
@@ -198,6 +214,9 @@ MainWindow::MainWindow(QWidget* parent)
         ui->markerEnableCheckBox->setChecked(spectrumWidget_->markerEnabled(marker));
         const QSignalBlocker trackBlocker(ui->markerTrackCheckBox);
         ui->markerTrackCheckBox->setChecked(spectrumWidget_->markerTracking(marker));
+        const QSignalBlocker traceBlocker(ui->markerTraceComboBox);
+        ui->markerTraceComboBox->setCurrentIndex(
+            static_cast<int>(spectrumWidget_->markerTrace(marker)));
     });
     loadSelectedMarker();
     const auto waterfallRangeChanged = [this]() {
@@ -217,7 +236,8 @@ MainWindow::MainWindow(QWidget* parent)
     // 顶部参数按显示、Trace、Marker 三组排列；紧凑尺寸避免分隔区缩小时重叠。
     for (QLabel* label : {ui->labelFftSize, ui->labelWindowFunction,
                           ui->labelReferenceLevel, ui->labelInputCompensation,
-                          ui->labelWaterfallRange, ui->labelMarker}) {
+                          ui->labelWaterfallRange, ui->labelMarker,
+                          ui->markerTraceLabel}) {
         label->setMinimumWidth(62);
         label->setMaximumWidth(76);
         label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -226,7 +246,8 @@ MainWindow::MainWindow(QWidget* parent)
         ui->fftSizeComboBox, ui->windowFunctionComboBox, ui->referenceLevelSpinBox,
         ui->inputCompensationSpinBox, ui->averageCountSpinBox,
         ui->waterfallMinSpinBox, ui->waterfallMaxSpinBox,
-        ui->markerSelectComboBox, ui->markerFrequencySpinBox
+        ui->markerSelectComboBox, ui->markerFrequencySpinBox,
+        ui->markerTraceComboBox
     };
     for (QWidget* control : alignedControls)
         control->setMinimumHeight(28);
@@ -236,6 +257,7 @@ MainWindow::MainWindow(QWidget* parent)
     ui->referenceLevelSpinBox->setMaximumWidth(108);
     ui->inputCompensationSpinBox->setMaximumWidth(96);
     ui->markerFrequencySpinBox->setMaximumWidth(158);
+    ui->markerTraceComboBox->setMaximumWidth(92);
     ui->markerPeakButton->setMaximumWidth(62);
     ui->markerNextPeakButton->setMaximumWidth(72);
 
