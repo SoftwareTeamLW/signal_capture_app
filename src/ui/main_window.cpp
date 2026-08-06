@@ -7,9 +7,11 @@
 #include "ui_main_window.h"
 
 #include <QAbstractButton>
+#include <QAbstractItemView>
 #include <QAction>
 #include <QCoreApplication>
 #include <QCheckBox>
+#include <QColor>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QSpinBox>
@@ -17,13 +19,21 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
+#include <QHeaderView>
 #include <QPushButton>
 #include <QPixmap>
 #include <QLabel>
 #include <QList>
+#include <QLocale>
 #include <QMessageBox>
+#include <QRadioButton>
 #include <QSplitter>
+#include <QStorageInfo>
 #include <QString>
+#include <QStringList>
+#include <QTableWidget>
+#include <QTableWidgetItem>
 #include <QTime>
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -72,7 +82,11 @@ MainWindow::MainWindow(QWidget* parent)
     ui->mainSplitter->setStretchFactor(0, 0);
     ui->mainSplitter->setStretchFactor(1, 1);
     ui->mainSplitter->setStretchFactor(2, 0);
-    ui->mainSplitter->setSizes({250, 940, 260});
+    ui->mainSplitter->setSizes({255, 945, 245});
+
+    // 左侧组合框保持紧凑；弹出的设备列表单独加宽，以完整显示型号、
+    // 序列号以及 X310 的地址或 PCIe resource。
+    ui->deviceSelectComboBox->view()->setMinimumWidth(300);
 
     for (int handleIndex = 1;
          handleIndex < ui->mainSplitter->count();
@@ -108,11 +122,18 @@ MainWindow::MainWindow(QWidget* parent)
     ui->waterfallPlaceholderLayout->addWidget(waterfallWidget_);
     ui->timeDomainPlaceholderLayout->addWidget(waveformWidget_);
 
-    // 右下角常驻显示本进程 CPU 和实际绘图帧率，便于低配客户机测试。
+    // 右下角常驻显示磁盘、进程 CPU 和实际绘图帧率。
     performanceLabel_ = new QLabel(tr("CPU --  |  Display 0 FPS"), this);
     performanceLabel_->setMinimumWidth(190);
     performanceLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     ui->statusBar->addPermanentWidget(performanceLabel_);
+    diskCapacityLabel_ = new QLabel(tr("磁盘 --"), this);
+    diskCapacityLabel_->setMinimumWidth(150);
+    diskCapacityLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    ui->statusBar->addPermanentWidget(diskCapacityLabel_);
+    diskStatusPath_ = QDir::homePath();
+    setupMetadataView();
+    updateDiskCapacity();
     performanceClock_.start();
     previousProcessTime100ns_ = processCpuTime100ns();
     performanceTimer_.setInterval(1000);
@@ -120,10 +141,9 @@ MainWindow::MainWindow(QWidget* parent)
             this, &MainWindow::updatePerformanceStatus);
     performanceTimer_.start();
 
-    // 当前阶段明确只支持连续采集，避免用户误以为保存/定长已经生效。
-    ui->timedRadioButton->setEnabled(false);
-    ui->durationSpinBox->setEnabled(false);
-    ui->saveIqCheckBox->setEnabled(false);
+    ui->durationSpinBox->setEnabled(ui->timedRadioButton->isChecked());
+    connect(ui->timedRadioButton, &QRadioButton::toggled,
+            ui->durationSpinBox, &QWidget::setEnabled);
     ui->averageCountSpinBox->setEnabled(ui->averageCheckBox->isChecked());
     ui->bandwidthSpinBox->setEnabled(!ui->autoBandwidthCheckBox->isChecked());
     connect(ui->averageCheckBox, &QCheckBox::toggled,
@@ -291,36 +311,55 @@ MainWindow::MainWindow(QWidget* parent)
             ui->logPlainTextEdit, &QPlainTextEdit::clear);
     connect(ui->saveScreenshotButton, &QPushButton::clicked,
             this, &MainWindow::saveScreenshot);
+    connect(ui->deviceSelectComboBox,
+            qOverload<int>(&QComboBox::currentIndexChanged),
+            this, [this](int) { updateDeviceControls(); });
 
     connect(&discoveryWatcher_, &QFutureWatcher<DeviceDiscoveryResult>::finished,
             this, [this]() {
         const DeviceDiscoveryResult result = discoveryWatcher_.result();
         setDeviceOperationBusy(false);
+        ui->deviceSelectComboBox->clear();
 
         if (!result.errorMessage.empty()) {
+            ui->deviceSelectComboBox->addItem(tr("设备查找失败"));
             appendLog(tr("错误"),
                       tr("UHD 设备查找失败：%1")
                           .arg(QString::fromStdString(result.errorMessage)));
             ui->systemStatusLabel->setText(tr("● 设备查找失败"));
+            updateDeviceControls();
             return;
         }
 
         if (result.devices.empty()) {
+            ui->deviceSelectComboBox->addItem(tr("未发现设备"));
             appendLog(tr("设备"), tr("未发现符合条件的 UHD 设备"));
             ui->systemStatusLabel->setText(tr("● 未发现设备"));
+            updateDeviceControls();
             return;
         }
 
         const auto deviceCount = static_cast<qulonglong>(result.devices.size());
         appendLog(tr("设备"), tr("发现 %1 台 UHD 设备").arg(deviceCount));
         for (std::size_t index = 0; index < result.devices.size(); ++index) {
+            const auto& device = result.devices[index];
+            ui->deviceSelectComboBox->addItem(
+                QString::fromStdString(device.displayName),
+                QString::fromStdString(device.connectionArgs));
+            const int comboIndex = ui->deviceSelectComboBox->count() - 1;
+            ui->deviceSelectComboBox->setItemData(
+                comboIndex,
+                QString::fromStdString(device.displayName) + QLatin1Char('\n')
+                    + QString::fromStdString(device.connectionArgs),
+                Qt::ToolTipRole);
             appendLog(tr("设备"),
                       tr("[%1] %2")
                           .arg(static_cast<qulonglong>(index + 1))
-                          .arg(QString::fromStdString(result.devices[index])));
+                          .arg(QString::fromStdString(device.connectionArgs)));
         }
         ui->systemStatusLabel->setText(
             tr("● 已发现 %1 台设备").arg(deviceCount));
+        updateDeviceControls();
     });
 
     connect(&connectionWatcher_, &QFutureWatcher<DeviceConnectionResult>::finished,
@@ -343,8 +382,6 @@ MainWindow::MainWindow(QWidget* parent)
         ui->connectionValueLabel->setText(tr("UHD"));
         ui->interfaceTypeValueLabel->setText(
             QString::fromStdString(result.interfaceType));
-        ui->connectionArgsValueLabel->setText(
-            QString::fromStdString(result.connectionArgsUsed));
         ui->fpgaVersionValueLabel->setText(tr("见设备日志"));
         ui->deviceConnectionStatusLabel->setText(tr("● 已连接"));
         ui->deviceConnectionStatusLabel->setStyleSheet(
@@ -370,8 +407,7 @@ MainWindow::~MainWindow()
 {
     stopReceiving();
     if (rxThread_) {
-        rxThread_->quit();
-        rxThread_->wait(2000);
+        rxThread_->wait();
     }
     // 防止关闭窗口时后台任务仍访问已经析构的设备对象。
     discoveryWatcher_.waitForFinished();
@@ -385,7 +421,7 @@ void MainWindow::startReceiving()
         return;
     }
 
-    const RxConfig config = currentRxConfig();
+    RxConfig config = currentRxConfig();
     spectrumWidget_->setReferenceLevel(
         static_cast<float>(ui->referenceLevelSpinBox->value()));
 
@@ -395,6 +431,44 @@ void MainWindow::startReceiving()
                              tr("中心频率、采样率和带宽必须大于 0。"));
         return;
     }
+
+    if (config.saveIq) {
+        const QString initialPath = QDir(diskStatusPath_).filePath(
+            suggestedIqFileName(config));
+        QString filePath = QFileDialog::getSaveFileName(
+            this, tr("选择 IQ 数据保存位置"), initialPath,
+            tr("复数 IQ 裸二进制数据 (*.bin);;所有文件 (*.*)"));
+        if (filePath.isEmpty()) return;
+        const QFileInfo selectedFile(filePath);
+        if (selectedFile.suffix().compare(
+                QStringLiteral("bin"), Qt::CaseInsensitive) != 0) {
+            filePath = QDir(selectedFile.absolutePath()).filePath(
+                selectedFile.completeBaseName() + QStringLiteral(".bin"));
+        }
+
+        const QStorageInfo storage(QFileInfo(filePath).absolutePath());
+        const quint64 expectedBytes = config.acquisitionMode == AcquisitionMode::Timed
+            ? static_cast<quint64>(config.durationSeconds * config.sampleRate * 8.0)
+            : 0;
+        if (expectedBytes > 0 && storage.isValid()
+            && expectedBytes > static_cast<quint64>(storage.bytesAvailable())) {
+            QMessageBox::warning(
+                this, tr("磁盘空间不足"),
+                tr("定长采集预计需要 %1 GiB，但当前磁盘仅剩 %2 GiB。")
+                    .arg(double(expectedBytes) / (1024.0 * 1024.0 * 1024.0), 0, 'f', 2)
+                    .arg(double(storage.bytesAvailable()) /
+                             (1024.0 * 1024.0 * 1024.0), 0, 'f', 2));
+            return;
+        }
+        config.iqFilePath = filePath;
+        diskStatusPath_ = QFileInfo(filePath).absolutePath();
+        updateDiskCapacity();
+    }
+
+    stopRequestedByUser_ = false;
+    acquisitionFailed_ = false;
+    activeAcquisitionTimed_ =
+        config.acquisitionMode == AcquisitionMode::Timed;
 
     rxThread_ = new QThread(this);
     rxWorker_ = new RxWorker(sdrDevice_->usrp(), config);
@@ -408,6 +482,7 @@ void MainWindow::startReceiving()
             this, [this](const QString& message) { appendLog(tr("警告"), message); });
     connect(rxWorker_, &RxWorker::errorOccurred,
             this, [this](const QString& message) {
+        acquisitionFailed_ = true;
         appendLog(tr("错误"), message);
         ui->systemStatusLabel->setText(tr("● 接收失败"));
         ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ff5d68;"));
@@ -425,7 +500,9 @@ void MainWindow::startReceiving()
             this, [this]() {
         ui->systemStatusLabel->setText(tr("● 正在接收 IQ 数据"));
         ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#30dd78;"));
-        appendLog(tr("接收"), tr("连续接收已经启动"));
+        appendLog(tr("接收"),
+                  activeAcquisitionTimed_ ? tr("定长接收已经启动")
+                                          : tr("连续接收已经启动"));
     });
     connect(rxWorker_, &RxWorker::statisticsUpdated,
             this, [this](quint64 samples, double samplesPerSecond, qint64 elapsedMs) {
@@ -436,6 +513,34 @@ void MainWindow::startReceiving()
             tr("%1 MiB/s").arg(samplesPerSecond * 8.0 / (1024.0 * 1024.0), 0, 'f', 2));
         ui->runningTimeValueLabel->setText(
             QTime(0, 0).addMSecs(static_cast<int>(elapsedMs % 86400000)).toString("HH:mm:ss"));
+            });
+    connect(rxWorker_, &RxWorker::metadataUpdated,
+            this, [this](const QString& deviceTime, quint64 packets,
+                         quint64 samples, quint64 overflows, quint64 timeouts,
+                         const QString& status) {
+        ui->metadataTableWidget->item(0, 1)->setText(
+            QDateTime::currentDateTime().toString("HH:mm:ss.zzz"));
+        ui->metadataTableWidget->item(1, 1)->setText(deviceTime);
+        ui->metadataTableWidget->item(2, 1)->setText(
+            QLocale().toString(static_cast<qulonglong>(packets)));
+        ui->metadataTableWidget->item(3, 1)->setText(
+            QLocale().toString(static_cast<qulonglong>(samples)));
+        ui->metadataTableWidget->item(4, 1)->setText(status);
+        ui->metadataTableWidget->item(5, 1)->setText(
+            QLocale().toString(static_cast<qulonglong>(overflows)));
+        ui->metadataTableWidget->item(6, 1)->setText(
+            QLocale().toString(static_cast<qulonglong>(timeouts)));
+    });
+    connect(rxWorker_, &RxWorker::iqSaveCompleted,
+            this, [this](const QString& path, quint64 samples, quint64 bytes) {
+        ui->metadataTableWidget->item(9, 1)->setText(
+            tr("完成 · %1 MiB").arg(double(bytes) / (1024.0 * 1024.0), 0, 'f', 2));
+        appendLog(tr("保存"),
+                  tr("IQ 文件写入完成：%1（%2 个 fc32 样本，%3 MiB）")
+                      .arg(QDir::toNativeSeparators(path))
+                      .arg(samples)
+                      .arg(double(bytes) / (1024.0 * 1024.0), 0, 'f', 2));
+        updateDiskCapacity();
     });
     connect(rxWorker_, &RxWorker::displayFrameReady,
             this, [this](const QVector<float>& i,
@@ -462,6 +567,16 @@ void MainWindow::startReceiving()
     setAcquisitionRunning(true);
     ui->receivedDataValueLabel->setText(tr("0 B"));
     ui->runningTimeValueLabel->setText(QStringLiteral("00:00:00"));
+    ui->metadataTableWidget->item(0, 1)->setText(tr("等待首包"));
+    ui->metadataTableWidget->item(1, 1)->setText(QStringLiteral("--"));
+    for (int row = 2; row <= 6; ++row)
+        ui->metadataTableWidget->item(row, 1)->setText(QStringLiteral("0"));
+    ui->metadataTableWidget->item(7, 1)->setText(
+        QString::number(static_cast<qulonglong>(config.channel)));
+    ui->metadataTableWidget->item(8, 1)->setText(QStringLiteral("fc32 / sc16"));
+    ui->metadataTableWidget->item(9, 1)->setText(
+        config.saveIq ? tr("正在写入 %1").arg(QFileInfo(config.iqFilePath).fileName())
+                      : tr("未保存"));
     ui->systemStatusLabel->setText(tr("● 正在配置接收参数..."));
     ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ffba4a;"));
     appendLog(tr("参数"),
@@ -477,6 +592,13 @@ void MainWindow::startReceiving()
                   .arg(config.maxHoldEnabled ? tr("开") : tr("关"))
                   .arg(config.minHoldEnabled ? tr("开") : tr("关"))
                   .arg(config.inputCompensationDb, 0, 'f', 2));
+    appendLog(tr("采集"),
+              activeAcquisitionTimed_
+                  ? tr("模式：定长采集，时长 %1 s").arg(config.durationSeconds, 0, 'f', 3)
+                  : tr("模式：连续采集"));
+    if (config.saveIq)
+        appendLog(tr("保存"), tr("IQ 数据将保存到：%1")
+                  .arg(QDir::toNativeSeparators(config.iqFilePath)));
     rxThread_->start();
 }
 
@@ -488,6 +610,7 @@ void MainWindow::stopReceiving()
     ui->systemStatusLabel->setText(tr("● 正在停止接收..."));
     ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ffba4a;"));
     rxWorker_->requestStop(); // 原子操作，可从 GUI 线程安全调用。
+    stopRequestedByUser_ = true;
     ui->stopReceiveButton->setEnabled(false);
     ui->actionStopReceive->setEnabled(false);
 }
@@ -500,38 +623,57 @@ void MainWindow::finishReceiving()
     setAcquisitionRunning(false);
     rxWorker_ = nullptr;
     rxThread_ = nullptr;
-    ui->systemStatusLabel->setText(tr("● 接收已经停止"));
-    ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ff5d68;"));
-    appendLog(tr("接收"), tr("连续接收已经安全停止"));
+    const bool completed = activeAcquisitionTimed_ && !stopRequestedByUser_
+        && !acquisitionFailed_;
+    if (acquisitionFailed_) {
+        ui->systemStatusLabel->setText(tr("● 采集异常停止"));
+        ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ff5d68;"));
+        appendLog(tr("接收"), tr("采集因错误停止，请检查上方错误日志"));
+    } else {
+        ui->systemStatusLabel->setText(
+            completed ? tr("● 定长采集已完成") : tr("● 接收已经停止"));
+        ui->systemStatusLabel->setStyleSheet(
+            completed ? QStringLiteral("color:#30dd78;")
+                      : QStringLiteral("color:#ff5d68;"));
+        appendLog(tr("接收"),
+                  completed ? tr("定长采集已按设定长度完成")
+                            : tr("接收已经安全停止"));
+    }
+    activeAcquisitionTimed_ = false;
+    stopRequestedByUser_ = false;
+    acquisitionFailed_ = false;
 }
 
 void MainWindow::findDevices()
 {
-    const QString deviceArgs = ui->connectionArgsEdit->text().trimmed();
-
     if (deviceOperationBusy_ || acquisitionRunning_) {
         return;
     }
 
     setDeviceOperationBusy(true);
+    ui->deviceSelectComboBox->clear();
+    ui->deviceSelectComboBox->addItem(tr("正在查找设备..."));
     ui->systemStatusLabel->setText(tr("● 正在查找设备..."));
-    appendLog(tr("设备"),
-              deviceArgs.isEmpty()
-                  ? tr("开始查找 UHD 设备（无筛选条件）")
-                  : tr("开始查找 UHD 设备，参数：%1").arg(deviceArgs));
+    appendLog(tr("设备"), tr("开始查找 UHD 设备"));
 
     discoveryWatcher_.setFuture(QtConcurrent::run(
-        [device = sdrDevice_.get(), args = deviceArgs.toStdString()]() {
-            return device->findDevices(args);
+        [device = sdrDevice_.get()]() {
+            return device->findDevices();
         }));
 }
 
 void MainWindow::connectDevice()
 {
-    const QString connectionArgs = ui->connectionArgsEdit->text().trimmed();
+    const QString connectionArgs =
+        ui->deviceSelectComboBox->currentData().toString().trimmed();
     const QString deviceOptions = ui->deviceArgsEdit->text().trimmed();
 
     if (deviceOperationBusy_ || acquisitionRunning_ || sdrDevice_->isConnected()) {
+        return;
+    }
+    if (connectionArgs.isEmpty()) {
+        QMessageBox::information(this, tr("尚未选择设备"),
+                                 tr("请先点击“查找设备”，再从下拉框选择目标设备。"));
         return;
     }
 
@@ -586,9 +728,7 @@ void MainWindow::disconnectDevice()
     ui->deviceModelValueLabel->setText(tr("未知"));
     ui->connectionValueLabel->setText(tr("未连接"));
     ui->interfaceTypeValueLabel->setText(tr("--"));
-    ui->connectionArgsValueLabel->setText(tr("--"));
     ui->fpgaVersionValueLabel->setText(tr("--"));
-    ui->temperatureValueLabel->setText(tr("-- °C"));
 
     ui->deviceConnectionStatusLabel->setText(tr("● 未连接"));
     ui->deviceConnectionStatusLabel->setStyleSheet(
@@ -610,14 +750,16 @@ void MainWindow::updateDeviceControls()
 {
     const bool connected = sdrDevice_->isConnected();
     const bool idle = !deviceOperationBusy_ && !acquisitionRunning_;
+    const bool deviceSelected =
+        !ui->deviceSelectComboBox->currentData().toString().isEmpty();
 
     ui->findDevicesButton->setEnabled(idle && !connected);
-    ui->connectDeviceButton->setEnabled(idle && !connected);
+    ui->connectDeviceButton->setEnabled(idle && !connected && deviceSelected);
     ui->disconnectDeviceButton->setEnabled(idle && connected);
     ui->actionFindDevices->setEnabled(idle && !connected);
-    ui->actionConnectDevice->setEnabled(idle && !connected);
+    ui->actionConnectDevice->setEnabled(idle && !connected && deviceSelected);
     ui->actionDisconnectDevice->setEnabled(idle && connected);
-    ui->connectionArgsEdit->setEnabled(idle && !connected);
+    ui->deviceSelectComboBox->setEnabled(idle && !connected);
     ui->deviceArgsEdit->setEnabled(idle && !connected);
 
     // 接收功能接通后，这两个状态仍由同一个函数统一维护。
@@ -636,8 +778,21 @@ void MainWindow::setAcquisitionRunning(bool running)
         ui->channelComboBox, ui->antennaComboBox
     };
     for (QWidget* widget : configurationWidgets) widget->setEnabled(!running);
+    const bool deterministicCapture =
+        activeAcquisitionTimed_ || ui->saveIqCheckBox->isChecked();
+    const QList<QWidget*> fixedDuringDeterministicCapture = {
+        ui->centerFrequencySpinBox, ui->sampleRateSpinBox,
+        ui->bandwidthSpinBox, ui->gainSpinBox, ui->autoBandwidthCheckBox
+    };
+    for (QWidget* widget : fixedDuringDeterministicCapture)
+        widget->setEnabled(!(running && deterministicCapture));
+    ui->continuousRadioButton->setEnabled(!running);
+    ui->timedRadioButton->setEnabled(!running);
+    ui->durationSpinBox->setEnabled(!running && ui->timedRadioButton->isChecked());
+    ui->saveIqCheckBox->setEnabled(!running);
     ui->averageCountSpinBox->setEnabled(ui->averageCheckBox->isChecked());
-    ui->bandwidthSpinBox->setEnabled(!ui->autoBandwidthCheckBox->isChecked());
+    if (!(running && deterministicCapture))
+        ui->bandwidthSpinBox->setEnabled(!ui->autoBandwidthCheckBox->isChecked());
     updateDeviceControls();
 }
 
@@ -659,6 +814,10 @@ RxConfig MainWindow::currentRxConfig() const
     config.minHoldEnabled = ui->minHoldCheckBox->isChecked();
     config.currentTraceVisible = ui->currentTraceCheckBox->isChecked();
     config.inputCompensationDb = ui->inputCompensationSpinBox->value();
+    config.acquisitionMode = ui->timedRadioButton->isChecked()
+        ? AcquisitionMode::Timed : AcquisitionMode::Continuous;
+    config.durationSeconds = ui->durationSpinBox->value();
+    config.saveIq = ui->saveIqCheckBox->isChecked();
     return config;
 }
 
@@ -684,6 +843,66 @@ void MainWindow::updatePerformanceStatus()
     performanceLabel_->setText(cpu >= 0.0
         ? tr("CPU %1%  |  Display %2 FPS").arg(cpu, 0, 'f', 1).arg(frames)
         : tr("CPU N/A  |  Display %1 FPS").arg(frames));
+    updateDiskCapacity();
+}
+
+void MainWindow::setupMetadataView()
+{
+    QTableWidget* table = ui->metadataTableWidget;
+    table->clear();
+    table->setRowCount(10);
+    table->setColumnCount(2);
+    table->setHorizontalHeaderLabels({tr("项目"), tr("实时值")});
+    table->verticalHeader()->hide();
+    table->horizontalHeader()->setStretchLastSection(true);
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setSelectionMode(QAbstractItemView::NoSelection);
+    table->setFocusPolicy(Qt::NoFocus);
+    table->setShowGrid(false);
+    table->setAlternatingRowColors(true);
+    table->verticalHeader()->setDefaultSectionSize(27);
+    table->setMinimumHeight(310);
+
+    const QStringList names = {
+        tr("主机时间"), tr("设备时间"), tr("接收包数"), tr("样本总数"),
+        tr("UHD 状态"), tr("溢出次数"), tr("超时次数"), tr("接收通道"),
+        tr("数据格式"), tr("IQ 保存")
+    };
+    for (int row = 0; row < names.size(); ++row) {
+        auto* name = new QTableWidgetItem(names[row]);
+        name->setForeground(QColor(QStringLiteral("#91a4bf")));
+        auto* value = new QTableWidgetItem(QStringLiteral("--"));
+        value->setForeground(QColor(QStringLiteral("#e8eef7")));
+        table->setItem(row, 0, name);
+        table->setItem(row, 1, value);
+    }
+}
+
+void MainWindow::updateDiskCapacity()
+{
+    QStorageInfo storage(diskStatusPath_);
+    storage.refresh();
+    if (!storage.isValid() || !storage.isReady()) {
+        diskCapacityLabel_->setText(tr("磁盘 --"));
+        return;
+    }
+    const double bytes = static_cast<double>(storage.bytesAvailable());
+    const QString available = bytes >= 1024.0 * 1024.0 * 1024.0
+        ? tr("%1 GiB").arg(bytes / (1024.0 * 1024.0 * 1024.0), 0, 'f', 1)
+        : tr("%1 MiB").arg(bytes / (1024.0 * 1024.0), 0, 'f', 0);
+    diskCapacityLabel_->setText(tr("磁盘可用 %1").arg(available));
+    diskCapacityLabel_->setToolTip(
+        tr("当前保存位置：%1").arg(QDir::toNativeSeparators(diskStatusPath_)));
+}
+
+QString MainWindow::suggestedIqFileName(const RxConfig& config) const
+{
+    return QStringLiteral("IQ_F%1MHz_SR%2MSps_%3_fc32.bin")
+        .arg(config.centerFrequencyHz / 1e6, 0, 'f', 6)
+        .arg(config.sampleRate / 1e6, 0, 'f', 3)
+        .arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"));
 }
 
 void MainWindow::appendLog(const QString& category, const QString& message)

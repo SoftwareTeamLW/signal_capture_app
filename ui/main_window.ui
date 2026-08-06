@@ -19,6 +19,10 @@
   <property name="windowTitle">
    <string>Signal Capture</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../resources/resources.qrc">
+    <normaloff>:/icons/luowave_icon_256x256.ico</normaloff>:/icons/luowave_icon_256x256.ico</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true">QMainWindow, QWidget#centralWidget { background:#111722; color:#dce5f3; font:10pt &quot;Microsoft YaHei UI&quot;; }
 QMenuBar { background:#1b2230; color:#e7edf7; border-bottom:1px solid #3a465a; }
@@ -125,7 +129,7 @@ QDoubleSpinBox:focus {
     <item>
      <widget class="QSplitter" name="mainSplitter">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -166,7 +170,7 @@ QDoubleSpinBox:focus {
        </property>
        <property name="maximumSize">
         <size>
-         <width>250</width>
+         <width>290</width>
          <height>16777215</height>
         </size>
        </property>
@@ -184,7 +188,7 @@ QDoubleSpinBox:focus {
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>252</width>
+          <width>254</width>
           <height>954</height>
          </rect>
         </property>
@@ -214,7 +218,7 @@ QDoubleSpinBox:focus {
            </property>
            <property name="maximumSize">
             <size>
-             <width>16777215</width>
+             <width>250</width>
              <height>90</height>
             </size>
            </property>
@@ -234,6 +238,12 @@ QDoubleSpinBox:focus {
          </item>
          <item>
           <widget class="QGroupBox" name="deviceStatusGroupBox">
+           <property name="maximumSize">
+            <size>
+             <width>250</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="title">
             <string>设备连接状态</string>
            </property>
@@ -245,22 +255,10 @@ QDoubleSpinBox:focus {
               </property>
              </widget>
             </item>
-            <item row="0" column="1">
-             <widget class="QLabel" name="deviceModelValueLabel">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
+            <item row="5" column="0">
+             <widget class="QLabel" name="labelFpga">
               <property name="text">
-               <string>未知</string>
+               <string>FPGA 版本：</string>
               </property>
              </widget>
             </item>
@@ -271,23 +269,28 @@ QDoubleSpinBox:focus {
               </property>
              </widget>
             </item>
-            <item row="1" column="1">
-             <widget class="QLabel" name="connectionValueLabel">
+            <item row="7" column="1">
+             <widget class="QComboBox" name="deviceSelectComboBox">
               <property name="minimumSize">
                <size>
-                <width>0</width>
-                <height>20</height>
+                <width>150</width>
+                <height>26</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>16777215</width>
-                <height>25</height>
+                <width>150</width>
+                <height>16777215</height>
                </size>
               </property>
-              <property name="text">
-               <string>未连接</string>
+              <property name="toolTip">
+               <string>点击“查找设备”后，从列表中选择要连接的 UHD 设备。</string>
               </property>
+              <item>
+               <property name="text">
+                <string>请先点击查找设备</string>
+               </property>
+              </item>
              </widget>
             </item>
             <item row="2" column="0">
@@ -297,165 +300,7 @@ QDoubleSpinBox:focus {
               </property>
              </widget>
             </item>
-            <item row="2" column="1">
-             <widget class="QLabel" name="interfaceTypeValueLabel">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>--</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="labelConnectionArgsValue">
-              <property name="text">
-               <string>已用参数：</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QLabel" name="connectionArgsValueLabel">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>--</string>
-              </property>
-              <property name="textInteractionFlags">
-               <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="labelStatus">
-              <property name="text">
-               <string>连接状态：</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1">
-             <widget class="QLabel" name="deviceConnectionStatusLabel">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color:#ffba4a;</string>
-              </property>
-              <property name="text">
-               <string>● 未连接</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="labelFpga">
-              <property name="text">
-               <string>FPGA 版本：</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QLabel" name="fpgaVersionValueLabel">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>--</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QLabel" name="labelTemperature">
-              <property name="text">
-               <string>设备温度：</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QLabel" name="temperatureValueLabel">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>-- °C</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="labelConnectionArgs">
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>指定参数：</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="1">
-             <widget class="QLineEdit" name="connectionArgsEdit">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>等价于 UHD --args，用于从多台 USRP 中指定目标设备。</string>
-              </property>
-              <property name="placeholderText">
-               <string>serial=... / type=x300,addr=...</string>
-              </property>
-             </widget>
-            </item>
-            <item row="8" column="0" colspan="2">
+            <item row="9" column="0" colspan="2">
              <layout class="QHBoxLayout" name="deviceButtonsLayout">
               <property name="spacing">
                <number>6</number>
@@ -486,11 +331,151 @@ QDoubleSpinBox:focus {
               </item>
              </layout>
             </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="interfaceTypeValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>--</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLabel" name="deviceConnectionStatusLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">color:#ffba4a;</string>
+              </property>
+              <property name="text">
+               <string>● 未连接</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="labelSelectDevice">
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>选择设备：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="labelStatus">
+              <property name="text">
+               <string>连接状态：</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLabel" name="fpgaVersionValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>--</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="deviceModelValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>未知</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="connectionValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>未连接</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <spacer name="verticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Policy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>15</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
            </layout>
           </widget>
          </item>
          <item>
           <widget class="QGroupBox" name="acquisitionParametersGroupBox">
+           <property name="maximumSize">
+            <size>
+             <width>250</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="title">
             <string>采集参数设置</string>
            </property>
@@ -766,6 +751,12 @@ QDoubleSpinBox:focus {
          </item>
          <item>
           <widget class="QGroupBox" name="acquisitionModeGroupBox">
+           <property name="maximumSize">
+            <size>
+             <width>250</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="title">
             <string>采集模式</string>
            </property>
@@ -803,6 +794,12 @@ QDoubleSpinBox:focus {
                 </property>
                 <property name="suffix">
                  <string> s</string>
+                </property>
+                <property name="decimals">
+                 <number>3</number>
+                </property>
+                <property name="minimum">
+                 <double>0.001000000000000</double>
                 </property>
                 <property name="maximum">
                  <double>86400.000000000000000</double>
@@ -1847,15 +1844,18 @@ QDoubleSpinBox:focus {
       <widget class="QScrollArea" name="rightScrollArea">
        <property name="minimumSize">
         <size>
-         <width>280</width>
+         <width>245</width>
          <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>380</width>
+         <width>245</width>
          <height>16777215</height>
         </size>
+       </property>
+       <property name="horizontalScrollBarPolicy">
+        <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
        </property>
        <property name="widgetResizable">
         <bool>true</bool>
@@ -1865,7 +1865,7 @@ QDoubleSpinBox:focus {
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>280</width>
+          <width>248</width>
           <height>954</height>
          </rect>
         </property>
@@ -1887,10 +1887,31 @@ QDoubleSpinBox:focus {
          </property>
          <item>
           <widget class="QGroupBox" name="acquisitionInfoGroupBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>240</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="title">
             <string>采集信息</string>
            </property>
            <layout class="QFormLayout" name="acquisitionInfoLayout">
+            <property name="formAlignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTop|Qt::AlignmentFlag::AlignTrailing</set>
+            </property>
             <item row="0" column="0">
              <widget class="QLabel" name="labelActualCenter">
               <property name="text">
@@ -1980,6 +2001,18 @@ QDoubleSpinBox:focus {
          </item>
          <item>
           <widget class="QGroupBox" name="metadataGroupBox">
+           <property name="minimumSize">
+            <size>
+             <width>240</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>240</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="title">
             <string>元数据显示</string>
            </property>
@@ -2060,8 +2093,14 @@ QDoubleSpinBox:focus {
            </property>
            <property name="minimumSize">
             <size>
-             <width>250</width>
+             <width>240</width>
              <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>240</width>
+             <height>16777215</height>
             </size>
            </property>
            <property name="title">
@@ -2074,7 +2113,7 @@ QDoubleSpinBox:focus {
                <bool>true</bool>
               </property>
               <property name="plainText">
-               <string>[系统] 等待查找并连接设备...\n[提示] 频谱、瀑布图和时域图当前为 UI 占位区</string>
+               <string>[系统] 等待查找并连接设备...</string>
               </property>
              </widget>
             </item>
@@ -2269,6 +2308,8 @@ QDoubleSpinBox:focus {
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <resources/>
+ <resources>
+  <include location="../resources/resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

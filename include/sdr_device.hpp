@@ -4,9 +4,15 @@
 #include <vector>
 #include <memory>
 
+struct DiscoveredDevice
+{
+    std::string displayName;
+    std::string connectionArgs;
+};
+
 struct DeviceDiscoveryResult
 {
-    std::vector<std::string> devices;
+    std::vector<DiscoveredDevice> devices;
     std::string errorMessage;
 };
 

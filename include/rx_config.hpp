@@ -6,6 +6,7 @@
 // 一次接收任务使用的完整配置。GUI 在启动线程前生成它，Worker 只读取副本，
 // 因而不会出现工作线程读取到一半已被界面修改的参数。
 enum class WindowFunction { Hann, Hamming, BlackmanHarris, FlatTop };
+enum class AcquisitionMode { Continuous, Timed };
 
 struct RxConfig
 {
@@ -23,4 +24,8 @@ struct RxConfig
     bool minHoldEnabled = false;
     bool currentTraceVisible = true;
     double inputCompensationDb = 0.0;
+    AcquisitionMode acquisitionMode = AcquisitionMode::Continuous;
+    double durationSeconds = 5.0;
+    bool saveIq = false;
+    QString iqFilePath;
 };

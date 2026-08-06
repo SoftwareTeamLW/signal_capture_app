@@ -38,6 +38,15 @@ signals:
     void statisticsUpdated(quint64 totalSamples,
                            double samplesPerSecond,
                            qint64 elapsedMilliseconds);
+    void metadataUpdated(const QString& deviceTime,
+                         quint64 packetCount,
+                         quint64 totalSamples,
+                         quint64 overflowCount,
+                         quint64 timeoutCount,
+                         const QString& status);
+    void iqSaveCompleted(const QString& filePath,
+                         quint64 samplesWritten,
+                         quint64 bytesWritten);
     void displayFrameReady(const QVector<float>& iSamples,
                            const QVector<float>& currentDb,
                            const QVector<float>& averageDb,

@@ -54,11 +54,14 @@ add_executable(signal_capture_app
     src/sdr_device.cpp
     include/rx_receiver.hpp
     include/rx_config.hpp
+    include/iq_file_writer.hpp
+    src/iq_file_writer.cpp
     src/rx_worker.cpp
     include/signal_plot_widgets.hpp
     src/signal_plot_widgets.cpp
     include/spectrum_processor.hpp
     src/spectrum_processor.cpp
+    resources/resources.qrc
 )
 
 target_include_directories(signal_capture_app

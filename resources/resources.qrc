@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>luowave_app_icon.ico</file>
+        <file>luowave_icon_16x16.ico</file>
+        <file>luowave_icon_32x32.ico</file>
+        <file>luowave_icon_48x48.ico</file>
+        <file>luowave_icon_256x256.ico</file>
+    </qresource>
+</RCC>

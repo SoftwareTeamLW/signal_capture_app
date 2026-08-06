@@ -1,4 +1,5 @@
 #include "rx_receiver.hpp"
+#include "iq_file_writer.hpp"
 
 #include <uhd/stream.hpp>
 #include <uhd/types/metadata.hpp>
@@ -8,6 +9,9 @@
 #include <algorithm>
 #include <chrono>
 #include <complex>
+#include <cmath>
+#include <limits>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -29,6 +33,21 @@ void RxWorker::startReceiving()
         return;
     }
 
+    std::unique_ptr<IqFileWriter> iqWriter;
+    const auto finishIqWriter = [this, &iqWriter]() {
+        if (!iqWriter) return;
+        QString error;
+        const bool success = iqWriter->close(error);
+        const quint64 samples = iqWriter->samplesWritten();
+        const quint64 bytes = iqWriter->bytesWritten();
+        if (success) {
+            emit iqSaveCompleted(config_.iqFilePath, samples, bytes);
+        } else if (!error.isEmpty()) {
+            emit errorOccurred(error);
+        }
+        iqWriter.reset();
+    };
+
     try {
         const std::size_t channel = config_.channel;
 
@@ -46,6 +65,12 @@ void RxWorker::startReceiving()
         double actualRate = usrp_->get_rx_rate(channel);
         double actualFrequency = usrp_->get_rx_freq(channel);
         double actualBandwidth = usrp_->get_rx_bandwidth(channel);
+        if (config_.saveIq) {
+            iqWriter = std::make_unique<IqFileWriter>();
+            QString error;
+            if (!iqWriter->open(config_.iqFilePath, error))
+                throw std::runtime_error(error.toUtf8().constData());
+        }
         emit configurationCompleted(
             tr("参数配置成功：通道 %1，采样率 %2 MS/s，中心频率 %3 MHz，"
                "带宽 %4 MHz，增益 %5 dB，天线 %6，FFT %7")
@@ -68,8 +93,19 @@ void RxWorker::startReceiving()
         std::vector<std::complex<float>> buffer(bufferSize);
         uhd::rx_metadata_t metadata;
 
-        uhd::stream_cmd_t startCommand(
-            uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+        const bool timed = config_.acquisitionMode == AcquisitionMode::Timed;
+        const quint64 targetSamples = timed
+            ? std::max<quint64>(
+                  1, static_cast<quint64>(
+                         std::llround(config_.durationSeconds * actualRate)))
+            : 0;
+        uhd::stream_cmd_t startCommand(timed
+            ? uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE
+            : uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+        if (timed) {
+            startCommand.num_samps = static_cast<std::size_t>(std::min<quint64>(
+                targetSamples, std::numeric_limits<std::size_t>::max()));
+        }
         startCommand.stream_now = true;
         streamer->issue_stream_cmd(startCommand);
 
@@ -79,6 +115,9 @@ void RxWorker::startReceiving()
         auto lastPreviewTime = startTime;
         quint64 totalSamples = 0;
         quint64 previousSamples = 0;
+        quint64 packetCount = 0;
+        quint64 overflowCount = 0;
+        quint64 timeoutCount = 0;
         bool overflowReported = false;
         unsigned appliedRevision = configRevision_.load();
         QVector<float> fftI;
@@ -86,7 +125,7 @@ void RxWorker::startReceiving()
         fftI.reserve(config_.fftSize);
         fftQ.reserve(config_.fftSize);
 
-        while (!stopRequested_.load()) {
+        while (!stopRequested_.load() && (!timed || totalSamples < targetSamples)) {
             // 所有 UHD 调用都留在接收线程。GUI 只提交配置副本，避免跨线程
             // 同时访问 multi_usrp。FFT/窗函数变化会清空历史迹线。
             const unsigned requestedRevision = configRevision_.load();
@@ -118,6 +157,11 @@ void RxWorker::startReceiving()
                 }
                 if (next.gainDb != config_.gainDb)
                     usrp_->set_rx_gain(next.gainDb, channel);
+                // 任务属性启动后不可改变，运行时请求只更新射频/频谱参数。
+                next.acquisitionMode = config_.acquisitionMode;
+                next.durationSeconds = config_.durationSeconds;
+                next.saveIq = config_.saveIq;
+                next.iqFilePath = config_.iqFilePath;
                 config_ = next;
                 if (fftChanged || holdModeChanged) {
                     spectrumProcessor_.reset();
@@ -129,13 +173,19 @@ void RxWorker::startReceiving()
                 appliedRevision = requestedRevision;
                 emit actualParameters(actualFrequency, actualRate, actualBandwidth);
             }
-            const std::size_t received =
-                streamer->recv(buffer.data(), buffer.size(), metadata, 0.10, false);
+            const std::size_t requestedSamples = timed
+                ? static_cast<std::size_t>(std::min<quint64>(
+                      buffer.size(), targetSamples - totalSamples))
+                : buffer.size();
+            const std::size_t received = streamer->recv(
+                buffer.data(), requestedSamples, metadata, 0.10, false);
 
             if (metadata.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT) {
+                ++timeoutCount;
                 continue; // 短超时保证停止按钮能被及时响应。
             }
             if (metadata.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW) {
+                ++overflowCount;
                 if (!overflowReported) {
                     emit warningOccurred(tr("检测到接收溢出，部分 IQ 样本可能丢失"));
                     overflowReported = true;
@@ -146,8 +196,15 @@ void RxWorker::startReceiving()
                 throw std::runtime_error(metadata.strerror());
             }
 
+            ++packetCount;
             totalSamples += static_cast<quint64>(received);
             const auto now = Clock::now();
+
+            if (iqWriter && received > 0) {
+                QString error;
+                if (!iqWriter->enqueue(buffer.data(), received, error))
+                    throw std::runtime_error(error.toUtf8().constData());
+            }
 
             // 目标约 50 FPS。绘图层还会按像素宽度压缩点数，避免大 FFT
             // 让 GUI 绘制数万条肉眼不可分辨的线段。
@@ -182,16 +239,46 @@ void RxWorker::startReceiving()
                     std::chrono::duration_cast<std::chrono::milliseconds>(
                         now - startTime).count();
                 emit statisticsUpdated(totalSamples, rate, elapsed);
+                const QString deviceTime = metadata.has_time_spec
+                    ? tr("%1 s").arg(metadata.time_spec.get_real_secs(), 0, 'f', 6)
+                    : QStringLiteral("--");
+                const QString status = overflowCount > 0
+                    ? tr("警告：发生溢出")
+                    : (timeoutCount > 0 ? tr("运行中（有超时）") : tr("正常"));
+                emit metadataUpdated(deviceTime, packetCount, totalSamples,
+                                     overflowCount, timeoutCount, status);
                 previousSamples = totalSamples;
                 lastStatisticsTime = now;
             }
         }
 
-        uhd::stream_cmd_t stopCommand(
-            uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
-        streamer->issue_stream_cmd(stopCommand);
+        const auto finishTime = Clock::now();
+        const qint64 finalElapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                finishTime - startTime).count();
+        const double finalSeconds = std::max(
+            1e-9, std::chrono::duration<double>(finishTime - startTime).count());
+        emit statisticsUpdated(totalSamples,
+                               static_cast<double>(totalSamples) / finalSeconds,
+                               finalElapsed);
+        const QString finalDeviceTime = totalSamples > 0 && metadata.has_time_spec
+            ? tr("%1 s").arg(metadata.time_spec.get_real_secs(), 0, 'f', 6)
+            : QStringLiteral("--");
+        const QString finalStatus = overflowCount > 0
+            ? tr("警告：发生溢出")
+            : (timeoutCount > 0 ? tr("完成（有超时）") : tr("正常"));
+        emit metadataUpdated(finalDeviceTime, packetCount, totalSamples,
+                             overflowCount, timeoutCount, finalStatus);
+
+        if (!timed || stopRequested_.load()) {
+            uhd::stream_cmd_t stopCommand(
+                uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
+            streamer->issue_stream_cmd(stopCommand);
+        }
+        finishIqWriter();
         emit receptionStopped();
     } catch (const std::exception& exception) {
+        finishIqWriter();
         emit errorOccurred(
             tr("接收失败：%1").arg(QString::fromUtf8(exception.what())));
         emit receptionStopped();

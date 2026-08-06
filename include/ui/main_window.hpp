@@ -17,6 +17,7 @@ class SpectrumWidget;
 class WaterfallWidget;
 class WaveformWidget;
 class QLabel;
+class QTableWidget;
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -45,6 +46,9 @@ private:
     void saveScreenshot();
     void appendLog(const QString& category, const QString& message);
     void updatePerformanceStatus();
+    void setupMetadataView();
+    void updateDiskCapacity();
+    QString suggestedIqFileName(const RxConfig& config) const;
     RxConfig currentRxConfig() const;
     void applyRuntimeConfig();
 
@@ -60,9 +64,14 @@ private:
     bool deviceOperationBusy_ = false;
     bool acquisitionRunning_ = false;
     QLabel* performanceLabel_ = nullptr;
+    QLabel* diskCapacityLabel_ = nullptr;
     QTimer performanceTimer_;
     QElapsedTimer performanceClock_;
     quint64 previousProcessTime100ns_ = 0;
     quint64 displayFrameCount_ = 0;
     quint64 previousDisplayFrameCount_ = 0;
+    QString diskStatusPath_;
+    bool stopRequestedByUser_ = false;
+    bool activeAcquisitionTimed_ = false;
+    bool acquisitionFailed_ = false;
 };

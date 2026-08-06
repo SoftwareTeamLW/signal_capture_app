@@ -19,6 +19,25 @@ std::string lowerCopy(std::string value)
     return value;
 }
 
+std::string discoveredDeviceName(const uhd::device_addr_t& device)
+{
+    const auto value = [&device](const char* key) {
+        return device.get(key, std::string());
+    };
+    const std::string product = value("product");
+    const std::string type = value("type");
+    const std::string serial = value("serial");
+    const std::string address = value("addr");
+    const std::string resource = value("resource");
+
+    std::string name = product.empty() ? type : product;
+    if (name.empty()) name = "UHD Device";
+    if (!serial.empty()) name += "  |  SN: " + serial;
+    if (!resource.empty()) name += "  |  " + resource;
+    else if (!address.empty()) name += "  |  " + address;
+    return name;
+}
+
 // 这里只解析 UHD 已安全返回的文本，不访问不同设备差异很大的属性树。
 // 无法确认 USB 2.0/3.0 时明确标为“速率未知”，避免猜测。
 std::string detectInterfaceType(const std::string& deviceModel,
@@ -88,7 +107,8 @@ DeviceDiscoveryResult SdrDevice::findDevices(const std::string& deviceArgs) cons
 
         result.devices.reserve(foundDevices.size());
         for (const auto& device : foundDevices) {
-            result.devices.push_back(device.to_string());
+            result.devices.push_back(
+                {discoveredDeviceName(device), device.to_string()});
         }
     } catch (const std::exception& exception) {
         result.errorMessage = exception.what();
