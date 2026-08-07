@@ -88,7 +88,9 @@ class WaterfallWidget final : public QWidget
 {
 public:
     explicit WaterfallWidget(QWidget* parent = nullptr);
-    void appendSpectrum(const QVector<float>& spectrumDb);
+    void appendSpectrum(const QVector<float>& spectrumDb,
+                        double sampleRate,
+                        double centerFrequency);
     void setColorRange(float minimumDb, float maximumDb);
 
 protected:
@@ -101,4 +103,11 @@ private:
     int writeRow_ = 0; // 环形行指针：避免每帧复制整张图片。
     float minimumDb_ = -125.0f;
     float maximumDb_ = -20.0f;
+    double sampleRate_ = 0.0;
+    double centerFrequency_ = 0.0;
+    // RxWorker limits preview delivery to about 30 FPS. Keeping the line
+    // period fixed makes the relative-time scale stable; measuring GUI event
+    // spacing here caused every time label to jitter under normal scheduler
+    // load even though the acquisition clock itself was stable.
+    static constexpr double kSecondsPerLine = 1.0 / 30.0;
 };

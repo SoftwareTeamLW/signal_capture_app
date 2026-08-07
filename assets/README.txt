@@ -5,4 +5,6 @@
 3. 重新执行 cmake --build build 后，CMake 会把 assets 复制到 exe 所在目录。
 4. 也可以不重新编译，直接替换 exe 同级 assets/company_logo.png，然后重启程序。
 
-程序按比例缩放图片，不会拉伸。未找到 PNG 时显示 COMPANY LOGO 占位文字。
+程序优先加载 exe 同级的 assets/company_logo.png，并在界面首次完成布局后
+按比例缩放，不会拉伸。若部署时漏拷 assets，程序会自动使用构建时内嵌的
+同一张 Logo，不再退回 COMPANY LOGO 占位文字。

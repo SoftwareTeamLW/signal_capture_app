@@ -1,5 +1,7 @@
 #include "iq_file_writer.hpp"
 
+#include <QCoreApplication>
+
 #include <filesystem>
 #include <utility>
 
@@ -19,7 +21,8 @@ bool IqFileWriter::open(const QString& filePath, QString& errorMessage)
 #endif
     stream_.open(path, std::ios::binary | std::ios::trunc);
     if (!stream_) {
-        errorMessage = QStringLiteral("无法创建 IQ 文件：%1").arg(filePath);
+        errorMessage = QCoreApplication::translate(
+            "IqFileWriter", "无法创建 IQ 文件：%1").arg(filePath);
         return false;
     }
     thread_ = std::thread(&IqFileWriter::writeLoop, this);
@@ -39,7 +42,8 @@ bool IqFileWriter::enqueue(const std::complex<float>* samples,
     if (queuedBytes_ + bytes > maxQueuedBytes_) {
         failed_ = true;
         stopping_ = true;
-        errorMessage_ = QStringLiteral(
+        errorMessage_ = QCoreApplication::translate(
+            "IqFileWriter",
             "IQ 磁盘写入速度低于接收速度，缓存已达到 64 MiB；为避免生成不连续文件，采集已停止。");
         errorMessage = errorMessage_;
         condition_.notify_one();
@@ -100,7 +104,8 @@ void IqFileWriter::writeLoop()
         if (!stream_) {
             failed_ = true;
             stopping_ = true;
-            errorMessage_ = QStringLiteral("写入 IQ 文件失败，请检查磁盘空间和目录权限。");
+            errorMessage_ = QCoreApplication::translate(
+                "IqFileWriter", "写入 IQ 文件失败，请检查磁盘空间和目录权限。");
             queue_.clear();
             queuedBytes_ = 0;
         } else {

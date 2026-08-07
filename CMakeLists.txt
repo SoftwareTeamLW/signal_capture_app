@@ -16,7 +16,7 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS
 )
 
 # 查找 Qt Widgets 模块
-find_package(Qt6 REQUIRED COMPONENTS Widgets Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Concurrent LinguistTools)
 
 # UHD 和 Boost 安装目录
 set(UHD_ROOT "C:/Program Files/UHD" CACHE PATH "UHD installation directory")
@@ -76,8 +76,35 @@ target_link_libraries(signal_capture_app
         UHD::uhd
 )
 
+# Parse the common Qt/STL headers once instead of once per translation unit.
+# Disable with -DSIGNAL_CAPTURE_USE_PCH=OFF when diagnosing toolchain issues.
+option(SIGNAL_CAPTURE_USE_PCH "Use precompiled headers to shorten C++ builds" ON)
+if(SIGNAL_CAPTURE_USE_PCH)
+    target_precompile_headers(signal_capture_app PRIVATE
+        <QObject>
+        <QString>
+        <QVector>
+        <QWidget>
+        <algorithm>
+        <memory>
+        <vector>
+    )
+endif()
+
+qt_add_translations(signal_capture_app
+    TS_FILES
+        translations/signal_capture_app_zh_CN.ts
+        translations/signal_capture_app_en.ts
+        translations/signal_capture_app_ru.ts
+    RESOURCE_PREFIX "/i18n"
+)
+
 if(MSVC)
     target_compile_options(signal_capture_app PRIVATE /utf-8)
+    target_compile_definitions(signal_capture_app PRIVATE
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
+    )
 endif()
 
 # 编译后将 uhd.dll 复制到 exe 所在目录
@@ -89,8 +116,8 @@ add_custom_command(
         "$<TARGET_FILE_DIR:signal_capture_app>"
 )
 
-# Logo 作为可替换的外部资源复制到 exe 旁。将 PNG 命名为
-# assets/company_logo.png 后重新构建即可，无需修改 C++ 或 UI。
+# Logo 同时作为可替换外部资源复制到 exe 旁。resources.qrc 中还保留
+# 同一文件的内嵌兜底；即使复制步骤未执行，左上角也不会退回占位文字。
 add_custom_command(
     TARGET signal_capture_app
     POST_BUILD

@@ -1,12 +1,12 @@
 #include "signal_plot_widgets.hpp"
 
-#include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
 #include <QResizeEvent>
 #include <QMouseEvent>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <utility>
 
@@ -23,10 +23,25 @@ const QColor kMinHold(184, 105, 255, 220); // Min Hold：紫色
 const QColor kMarker(255, 255, 255);
 constexpr float kTopDb = 0.0f;
 constexpr float kBottomDb = -140.0f;
+// All three plots share these horizontal margins. The left strip is only wide
+// enough for a four-character dB/time label; the right strip is deliberately
+// narrow so useful data occupies nearly the full center panel.
+constexpr int kPlotLeftMargin = 46;
+constexpr int kPlotRightMargin = 5;
 
 QRect plotRect(const QWidget& widget)
 {
-    return widget.rect().adjusted(54, 30, -12, -28);
+    return widget.rect().adjusted(
+        kPlotLeftMargin, 30, -kPlotRightMargin, -28);
+}
+
+QRect waterfallPlotRect(const QWidget& widget)
+{
+    // The spectrum and waterfall deliberately share the same horizontal plot
+    // margins. Time labels live inside the common left margin, so the two
+    // frequency spans remain pixel-aligned without reserving another strip.
+    return widget.rect().adjusted(
+        kPlotLeftMargin, 30, -kPlotRightMargin, -44);
 }
 
 void drawInstrumentFrame(QPainter& painter, const QWidget& widget,
@@ -39,12 +54,15 @@ void drawInstrumentFrame(QPainter& painter, const QWidget& widget,
     painter.setRenderHint(QPainter::Antialiasing, false);
     for (int i = 1; i < 20; ++i) {
         painter.setPen((i % 2 == 0) ? kMajorGrid : kMinorGrid);
-        const int x = area.left() + i * area.width() / 20;
+        const int x = area.left() + i * (area.width() - 1) / 20;
         painter.drawLine(x, area.top(), x, area.bottom());
     }
-    for (int i = 1; i < 16; ++i) {
+    // Fourteen minor intervals cover the 140 dB spectrum range. Every second
+    // line is therefore exactly one 20 dB major division and lines up with the
+    // numeric labels drawn by SpectrumWidget.
+    for (int i = 1; i < 14; ++i) {
         painter.setPen((i % 2 == 0) ? kMajorGrid : kMinorGrid);
-        const int y = area.top() + i * area.height() / 16;
+        const int y = area.top() + i * (area.height() - 1) / 14;
         painter.drawLine(area.left(), y, area.right(), y);
     }
     painter.setPen(QPen(QColor(74, 101, 121), 1));
@@ -58,7 +76,9 @@ qreal dbToY(float value, const QRect& area, float topDb = kTopDb)
     const float bottomDb = topDb - (kTopDb - kBottomDb);
     const float normalized = std::clamp(
         (value - bottomDb) / (topDb - bottomDb), 0.0f, 1.0f);
-    return area.bottom() - normalized * area.height();
+    // QRect::width()/height() include both edge pixels. Using the full value
+    // would place the first/last point one pixel outside the frame.
+    return area.bottom() - normalized * std::max(1, area.height() - 1);
 }
 
 QPainterPath tracePath(const QVector<float>& values, const QRect& area,
@@ -76,24 +96,98 @@ QPainterPath tracePath(const QVector<float>& values, const QRect& area,
         for (qsizetype i = begin + 1;
              i < std::min<qsizetype>(end, values.size()); ++i)
             peak = std::max(peak, values[i]);
-        const qreal x = area.left() + column * area.width() / qreal(columns - 1);
+        const qreal x = area.left() + column * (area.width() - 1)
+            / qreal(columns - 1);
         const qreal y = dbToY(peak, area, topDb);
         column == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
     }
     return path;
 }
 
+struct ColorStop
+{
+    float position;
+    int red;
+    int green;
+    int blue;
+};
+
+const std::array<QRgb, 1024>& waterfallPalette()
+{
+    // Blue instrument palette: the noise floor stays near-black, mid-level
+    // energy uses saturated blue, and strong narrowband signals approach a
+    // restrained cyan-white. The monotonic luminance keeps power readable.
+    static const std::array<QRgb, 1024> palette = [] {
+        constexpr std::array<ColorStop, 7> stops{{
+            {0.00f,   1,   5,  14},
+            {0.17f,   3,  18,  48},
+            {0.34f,   4,  48, 106},
+            {0.52f,   8,  91, 178},
+            {0.70f,  12, 145, 218},
+            {0.86f,  67, 202, 241},
+            {1.00f, 222, 249, 255}
+        }};
+        std::array<QRgb, 1024> result{};
+        for (std::size_t index = 0; index < result.size(); ++index) {
+            const float value = float(index) / float(result.size() - 1);
+            std::size_t upper = 1;
+            while (upper < stops.size() - 1
+                   && value > stops[upper].position) {
+                ++upper;
+            }
+            const ColorStop& left = stops[upper - 1];
+            const ColorStop& right = stops[upper];
+            const float ratio = (value - left.position)
+                / std::max(0.001f, right.position - left.position);
+            const auto mix = [ratio](int a, int b) {
+                return int(std::lround(a + ratio * (b - a)));
+            };
+            result[index] = qRgb(mix(left.red, right.red),
+                                 mix(left.green, right.green),
+                                 mix(left.blue, right.blue));
+        }
+        return result;
+    }();
+    return palette;
+}
+
 QRgb waterfallColor(float db, float minimumDb, float maximumDb)
 {
     const float span = std::max(1.0f, maximumDb - minimumDb);
-    const float t = std::clamp((db - minimumDb) / span, 0.0f, 1.0f);
-    // 深蓝 → 青 → 黄 → 红，低电平保持暗色，细节比 HSV 彩虹更清楚。
-    QColor color;
-    if (t < 0.33f) color = QColor::fromRgbF(0.02, 0.08 + t, 0.18 + 1.8 * t);
-    else if (t < 0.68f) color = QColor::fromRgbF(0.02, 0.25 + t, 1.0 - t);
-    else color = QColor::fromRgbF(
-        1.0, 1.0 - 0.9 * (t - 0.68) / 0.32, 0.05);
-    return color.rgb();
+    const float normalized = std::clamp(
+        (db - minimumDb) / span, 0.0f, 1.0f);
+    const auto& palette = waterfallPalette();
+    const std::size_t index = std::min(
+        palette.size() - 1,
+        std::size_t(normalized * float(palette.size() - 1)));
+    return palette[index];
+}
+
+float spectrumValueForPixel(const QVector<float>& values, int x, int width)
+{
+    if (values.size() == 1 || width <= 1)
+        return values.front();
+
+    if (values.size() >= width) {
+        // Preserve the strongest bin in each pixel column so narrow carriers
+        // do not disappear when the FFT has more bins than screen pixels.
+        const qsizetype begin = qsizetype(x) * values.size() / width;
+        const qsizetype end = std::max<qsizetype>(
+            begin + 1, qsizetype(x + 1) * values.size() / width);
+        float peak = values[begin];
+        for (qsizetype index = begin + 1;
+             index < std::min<qsizetype>(end, values.size()); ++index) {
+            peak = std::max(peak, values[index]);
+        }
+        return peak;
+    }
+
+    // Interpolate when the widget is wider than the FFT to avoid blocky bands.
+    const double position = double(x) * (values.size() - 1) / double(width - 1);
+    const qsizetype left = qsizetype(position);
+    const qsizetype right = std::min<qsizetype>(left + 1, values.size() - 1);
+    const float ratio = float(position - left);
+    return values[left] + ratio * (values[right] - values[left]);
 }
 }
 
@@ -123,7 +217,8 @@ void WaveformWidget::paintEvent(QPaintEvent*)
     const float fullScale = std::max(peak * 1.10f, 1.0e-4f);
     QPainterPath path;
     for (qsizetype i = 0; i < samples_.size(); ++i) {
-        const qreal x = area.left() + i * area.width() / qreal(samples_.size() - 1);
+        const qreal x = area.left() + i * (area.width() - 1)
+            / qreal(samples_.size() - 1);
         const qreal y = area.center().y() -
             std::clamp(samples_[i] / fullScale, -1.0f, 1.0f) * area.height() * 0.46;
         i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
@@ -347,7 +442,10 @@ void SpectrumWidget::mousePressEvent(QMouseEvent* event)
     auto& state = markers_[activeMarker_];
     state.enabled = true;
     state.tracking = false;
-    const double ratio = std::clamp((event->position().x() - area.left()) / area.width(), 0.0, 1.0);
+    const double ratio = std::clamp(
+        (event->position().x() - area.left())
+            / std::max(1, area.width() - 1),
+        0.0, 1.0);
     state.frequencyHz = centerFrequency_ - sampleRate_ / 2.0 + ratio * sampleRate_;
     state.peakRank = 0;
     notifyMarkerChanged(activeMarker_);
@@ -364,8 +462,14 @@ void SpectrumWidget::paintEvent(QPaintEvent*)
     painter.setPen(kText);
     const int top = static_cast<int>(std::round(referenceLevelDb_ / 20.0f)) * 20;
     for (int db = top; db >= top - 140; db -= 20) {
-        painter.drawText(5, qRound(dbToY(float(db), area, float(top))) + 4,
+        const int y = qRound(dbToY(float(db), area, float(top)));
+        // Right-align each value against the Y axis instead of placing it at a
+        // fixed X coordinate. This keeps -140, -20 and 0 equally close to the
+        // plot and precisely aligned with their grid line.
+        painter.drawText(QRect(2, y - 8, area.left() - 8, 16),
+                         Qt::AlignRight | Qt::AlignVCenter,
                          QString::number(db));
+        painter.drawLine(area.left() - 4, y, area.left(), y);
     }
 
     painter.setRenderHint(QPainter::Antialiasing);
@@ -403,7 +507,7 @@ void SpectrumWidget::paintEvent(QPaintEvent*)
         if (values.size() != currentDb_.size()) continue;
         const qsizetype peakIndex = frequencyToIndex(state.frequencyHz);
         const float peakValue = values[peakIndex];
-        const qreal peakX = area.left() + peakIndex * area.width() /
+        const qreal peakX = area.left() + peakIndex * (area.width() - 1) /
             qreal(currentDb_.size() - 1);
         const qreal peakY = dbToY(peakValue, area, float(top));
         const double peakHz = centerFrequency_ - sampleRate_ / 2.0 +
@@ -428,7 +532,7 @@ WaterfallWidget::WaterfallWidget(QWidget* parent) : QWidget(parent)
 
 void WaterfallWidget::recreateImage()
 {
-    const QRect area = plotRect(*this);
+    const QRect area = waterfallPlotRect(*this);
     if (area.width() <= 0 || area.height() <= 0) return;
     image_ = QImage(area.size(), QImage::Format_RGB32);
     image_.fill(kPlotBackground);
@@ -437,9 +541,14 @@ void WaterfallWidget::recreateImage()
 
 void WaterfallWidget::resizeEvent(QResizeEvent*) { recreateImage(); }
 
-void WaterfallWidget::appendSpectrum(const QVector<float>& values)
+void WaterfallWidget::appendSpectrum(const QVector<float>& values,
+                                     double sampleRate,
+                                     double centerFrequency)
 {
     if (values.isEmpty()) return;
+    sampleRate_ = sampleRate;
+    centerFrequency_ = centerFrequency;
+
     if (image_.isNull()) recreateImage();
     if (image_.isNull()) return;
 
@@ -447,9 +556,9 @@ void WaterfallWidget::appendSpectrum(const QVector<float>& values)
     writeRow_ = (writeRow_ - 1 + image_.height()) % image_.height();
     QRgb* line = reinterpret_cast<QRgb*>(image_.scanLine(writeRow_));
     for (int x = 0; x < image_.width(); ++x) {
-        const qsizetype index = std::min<qsizetype>(values.size() - 1,
-            qsizetype(double(x) * values.size() / image_.width()));
-        line[x] = waterfallColor(values[index], minimumDb_, maximumDb_);
+        line[x] = waterfallColor(
+            spectrumValueForPixel(values, x, image_.width()),
+            minimumDb_, maximumDb_);
     }
     update();
 }
@@ -464,16 +573,111 @@ void WaterfallWidget::setColorRange(float minimumDb, float maximumDb)
 void WaterfallWidget::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
-    drawInstrumentFrame(painter, *this, tr("WATERFALL  ·  NEWEST AT TOP"));
-    if (image_.isNull()) return;
-    const QRect area = plotRect(*this);
+    painter.fillRect(rect(), kBackground);
+    painter.setPen(kText);
+    painter.drawText(12, 20, tr("WATERFALL  ·  NEWEST AT TOP"));
+
+    const QRect area = waterfallPlotRect(*this);
+    if (area.isEmpty()) return;
+    painter.fillRect(area, kPlotBackground);
+
     // 环形图的最新一行显示在顶部，只做两次图像块绘制，不复制像素。
-    const int tail = image_.height() - writeRow_;
-    painter.drawImage(QRect(area.left(), area.top(), area.width(), tail), image_,
-                      QRect(0, writeRow_, image_.width(), tail));
-    if (writeRow_ > 0) {
-        painter.drawImage(QRect(area.left(), area.top() + tail,
-                                area.width(), writeRow_), image_,
-                          QRect(0, 0, image_.width(), writeRow_));
+    if (!image_.isNull()) {
+        const int tail = image_.height() - writeRow_;
+        painter.drawImage(QRect(area.left(), area.top(), area.width(), tail),
+                          image_,
+                          QRect(0, writeRow_, image_.width(), tail));
+        if (writeRow_ > 0) {
+            painter.drawImage(QRect(area.left(), area.top() + tail,
+                                    area.width(), writeRow_), image_,
+                              QRect(0, 0, image_.width(), writeRow_));
+        }
     }
+
+    painter.setRenderHint(QPainter::Antialiasing, false);
+    constexpr int divisions = 4;
+    const QColor grid(142, 196, 230, 58);
+    painter.setPen(grid);
+    for (int division = 1; division < divisions; ++division) {
+        const int x = area.left()
+            + division * (area.width() - 1) / divisions;
+        const int y = area.top()
+            + division * (area.height() - 1) / divisions;
+        painter.drawLine(x, area.top(), x, area.bottom());
+        painter.drawLine(area.left(), y, area.right(), y);
+    }
+    painter.setPen(QPen(QColor(64, 126, 174), 1));
+    painter.drawRect(area);
+
+    // Frequency axis follows the current UHD center frequency and sample rate.
+    const double maximumFrequency = std::max(
+        std::abs(centerFrequency_ - sampleRate_ / 2.0),
+        std::abs(centerFrequency_ + sampleRate_ / 2.0));
+    double frequencyScale = 1.0;
+    QString frequencyUnit = QStringLiteral("Hz");
+    if (maximumFrequency >= 1.0e9) {
+        frequencyScale = 1.0e9;
+        frequencyUnit = QStringLiteral("GHz");
+    } else if (maximumFrequency >= 1.0e6) {
+        frequencyScale = 1.0e6;
+        frequencyUnit = QStringLiteral("MHz");
+    } else if (maximumFrequency >= 1.0e3) {
+        frequencyScale = 1.0e3;
+        frequencyUnit = QStringLiteral("kHz");
+    }
+    const double scaledSpan = sampleRate_ / frequencyScale;
+    const int frequencyDecimals = scaledSpan < 0.01 ? 5
+        : (scaledSpan < 0.1 ? 4 : (scaledSpan < 10.0 ? 3 : 2));
+
+    painter.setPen(kText);
+    for (int division = 0; division <= divisions; ++division) {
+        const double ratio = double(division) / divisions;
+        const int x = area.left()
+            + int(std::lround(ratio * (area.width() - 1)));
+        const double frequency = centerFrequency_ - sampleRate_ / 2.0
+            + ratio * sampleRate_;
+        const QString label = sampleRate_ > 0.0
+            ? QString::number(frequency / frequencyScale,
+                              'f', frequencyDecimals)
+            : QStringLiteral("--");
+        QRect labelRect(x - 55, area.bottom() + 3, 110, 16);
+        Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignTop;
+        if (division == 0) {
+            labelRect.moveLeft(area.left());
+            alignment = Qt::AlignLeft | Qt::AlignTop;
+        } else if (division == divisions) {
+            labelRect.moveRight(area.right());
+            alignment = Qt::AlignRight | Qt::AlignTop;
+        }
+        painter.drawText(labelRect, alignment, label);
+    }
+    painter.drawText(QRect(area.left(), height() - 18, area.width(), 16),
+                     Qt::AlignCenter,
+                     tr("FREQUENCY (%1)").arg(frequencyUnit));
+
+    // One image row represents one throttled preview frame. Use the fixed
+    // 30 FPS preview period instead of measuring GUI delivery intervals: event
+    // scheduling is inherently noisy and previously made every label move on
+    // every repaint. The scale now remains motionless until the widget itself
+    // is resized.
+    const double historySeconds = kSecondsPerLine * area.height();
+    const int timeDecimals = historySeconds < 1.0 ? 2
+        : (historySeconds < 10.0 ? 1 : 0);
+    for (int division = 0; division <= divisions; ++division) {
+        const double ratio = double(division) / divisions;
+        const int y = area.top()
+            + int(std::lround(ratio * (area.height() - 1)));
+        const double age = ratio * historySeconds;
+        const QString label = division == 0
+            ? QStringLiteral("0")
+            : QStringLiteral("-%1").arg(age, 0, 'f', timeDecimals);
+        painter.drawText(QRect(3, y - 8, area.left() - 9, 16),
+                         Qt::AlignRight | Qt::AlignVCenter, label);
+    }
+
+    // Keep the time-axis caption in the title band. A vertical caption beside
+    // the plot would require a wider left margin and break alignment with the
+    // spectrum above it.
+    painter.drawText(QRect(area.left(), 5, area.width(), 18),
+                     Qt::AlignRight | Qt::AlignVCenter, tr("TIME (s)"));
 }

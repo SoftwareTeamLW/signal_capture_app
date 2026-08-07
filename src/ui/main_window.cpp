@@ -9,38 +9,53 @@
 #include <QAbstractButton>
 #include <QAbstractItemView>
 #include <QAction>
+#include <QActionGroup>
+#include <QApplication>
 #include <QCoreApplication>
 #include <QCheckBox>
 #include <QColor>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QEvent>
 #include <QSpinBox>
 #include <QSignalBlocker>
 #include <QDateTime>
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFutureWatcher>
+#include <QGroupBox>
 #include <QHeaderView>
 #include <QPushButton>
 #include <QPixmap>
 #include <QLabel>
+#include <QLibraryInfo>
 #include <QList>
 #include <QLocale>
 #include <QMessageBox>
+#include <QPlainTextEdit>
 #include <QRadioButton>
+#include <QSizePolicy>
 #include <QSplitter>
 #include <QStorageInfo>
 #include <QString>
 #include <QStringList>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QThread>
 #include <QTime>
+#include <QTimer>
+#include <QTranslator>
+#include <QVariant>
+#include <QPointer>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <algorithm>
 
 #ifdef Q_OS_WIN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 
@@ -60,12 +75,55 @@ quint64 processCpuTime100ns()
 #endif
 }
 
-WindowFunction selectedWindow(const QString& text)
+WindowFunction selectedWindow(int index)
 {
-    if (text == QStringLiteral("Hamming")) return WindowFunction::Hamming;
-    if (text == QStringLiteral("Blackman-Harris")) return WindowFunction::BlackmanHarris;
-    if (text == QStringLiteral("Flat Top")) return WindowFunction::FlatTop;
-    return WindowFunction::Hann;
+    switch (index) {
+    case 1: return WindowFunction::Hamming;
+    case 2: return WindowFunction::BlackmanHarris;
+    case 3: return WindowFunction::FlatTop;
+    default: return WindowFunction::Hann;
+    }
+}
+
+QString translatedSdrValue(const QString& source)
+{
+    if (source == QStringLiteral("UHD 设备"))
+        return QCoreApplication::translate("SdrDevice", "UHD 设备");
+    if (source == QStringLiteral("USB（速率未知）"))
+        return QCoreApplication::translate("SdrDevice", "USB（速率未知）");
+    if (source == QStringLiteral("未知"))
+        return QCoreApplication::translate("SdrDevice", "未知");
+    if (source == QStringLiteral("默认（未指定）"))
+        return QCoreApplication::translate("SdrDevice", "默认（未指定）");
+    return source;
+}
+
+QString translatedDeviceDisplayName(const QString& source)
+{
+    const QStringList knownPrefixes = {
+        QStringLiteral("UHD 设备"),
+        QStringLiteral("UHD Device"),
+        QStringLiteral("Устройство UHD")
+    };
+    for (const QString& prefix : knownPrefixes) {
+        if (source.startsWith(prefix)) {
+            return QCoreApplication::translate("SdrDevice", "UHD 设备")
+                + source.mid(prefix.size());
+        }
+    }
+    return source;
+}
+
+QPixmap loadCompanyLogo()
+{
+    // Keep the executable-side file replaceable for deployments and customer
+    // branding. The embedded image guarantees a visible logo in fresh builds.
+    const QString externalPath = QCoreApplication::applicationDirPath()
+        + QStringLiteral("/assets/company_logo.png");
+    QPixmap logo(externalPath);
+    if (logo.isNull())
+        logo.load(QStringLiteral(":/branding/company_logo.png"));
+    return logo;
 }
 }
 
@@ -73,8 +131,13 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , sdrDevice_(std::make_unique<SdrDevice>())
+    , discoveryWatcher_(
+          std::make_unique<QFutureWatcher<DeviceDiscoveryResult>>())
+    , connectionWatcher_(
+          std::make_unique<QFutureWatcher<DeviceConnectionResult>>())
 {
     ui->setupUi(this);
+    setupLanguageMenu();
 
     setWindowTitle(tr("LuoWave Signal Capture"));
     resize(1450, 900);
@@ -82,7 +145,7 @@ MainWindow::MainWindow(QWidget* parent)
     ui->mainSplitter->setStretchFactor(0, 0);
     ui->mainSplitter->setStretchFactor(1, 1);
     ui->mainSplitter->setStretchFactor(2, 0);
-    ui->mainSplitter->setSizes({255, 945, 245});
+    applyMainPanelGeometry();
 
     // 左侧组合框保持紧凑；弹出的设备列表单独加宽，以完整显示型号、
     // 序列号以及 X310 的地址或 PCIe resource。
@@ -95,20 +158,29 @@ MainWindow::MainWindow(QWidget* parent)
     }
 
     ui->displaySplitter->setChildrenCollapsible(false);
+    // Keep the time-domain preview compact for now. Extra vertical space goes
+    // primarily to the waterfall, leaving room for the later analysis panel
+    // without sacrificing the spectrum's minimum readable height.
     ui->displaySplitter->setStretchFactor(0, 3);
-    ui->displaySplitter->setStretchFactor(1, 2);
-    ui->displaySplitter->setStretchFactor(2, 1);
-    ui->displaySplitter->setSizes({320, 210, 140});
+    ui->displaySplitter->setStretchFactor(1, 4);
+    ui->displaySplitter->setStretchFactor(2, 0);
+    ui->displaySplitter->setSizes({290, 340, 105});
 
-    // Logo 不编译进程序：客户只需替换可执行文件旁 assets/company_logo.png。
-    const QString logoPath = QCoreApplication::applicationDirPath()
-        + QStringLiteral("/assets/company_logo.png");
-    const QPixmap companyLogo(logoPath);
+    const QPixmap companyLogo = loadCompanyLogo();
     if (!companyLogo.isNull()) {
         ui->companyLogoLabel->setText(QString());
-        ui->companyLogoLabel->setPixmap(companyLogo.scaled(
-            std::max(160, ui->companyLogoLabel->width()), 72,
-            Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        ui->companyLogoLabel->setStyleSheet(QStringLiteral(
+            "background:#111722;border:1px solid #34445a;"
+            "border-radius:7px;padding:3px;"));
+        // Wait until the layout has assigned the label its final size. Scaling
+        // before the first layout pass is why the logo could be tiny or absent.
+        QTimer::singleShot(0, this, [this, companyLogo]() {
+            const QSize target = ui->companyLogoLabel->contentsRect().size();
+            if (!target.isEmpty()) {
+                ui->companyLogoLabel->setPixmap(companyLogo.scaled(
+                    target, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            }
+        });
     }
 
     // 正式仪表控件采用 Qt 栅格绘制；无独显、远程桌面和软件渲染均可工作。
@@ -253,13 +325,15 @@ MainWindow::MainWindow(QWidget* parent)
     spectrumWidget_->setCurrentTraceVisible(ui->currentTraceCheckBox->isChecked());
     waterfallRangeChanged();
 
-    // 顶部参数按显示、Trace、Marker 三组排列；紧凑尺寸避免分隔区缩小时重叠。
+    // 顶部参数按显示、Trace、Marker 三组排列。文字控件不能使用只适合
+    // 中文的固定宽度，否则英文和俄文切换后会被截断。
     for (QLabel* label : {ui->labelFftSize, ui->labelWindowFunction,
                           ui->labelReferenceLevel, ui->labelInputCompensation,
                           ui->labelWaterfallRange, ui->labelMarker,
                           ui->markerTraceLabel}) {
-        label->setMinimumWidth(62);
-        label->setMaximumWidth(76);
+        label->setMinimumWidth(0);
+        label->setMaximumWidth(QWIDGETSIZE_MAX);
+        label->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
         label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     }
     const QList<QWidget*> alignedControls = {
@@ -277,9 +351,25 @@ MainWindow::MainWindow(QWidget* parent)
     ui->referenceLevelSpinBox->setMaximumWidth(108);
     ui->inputCompensationSpinBox->setMaximumWidth(96);
     ui->markerFrequencySpinBox->setMaximumWidth(158);
-    ui->markerTraceComboBox->setMaximumWidth(92);
-    ui->markerPeakButton->setMaximumWidth(62);
-    ui->markerNextPeakButton->setMaximumWidth(72);
+    ui->windowFunctionComboBox->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    ui->markerTraceComboBox->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    ui->markerTraceComboBox->setMaximumWidth(150);
+
+    for (QAbstractButton* textControl : {
+             static_cast<QAbstractButton*>(ui->maxHoldCheckBox),
+             static_cast<QAbstractButton*>(ui->minHoldCheckBox),
+             static_cast<QAbstractButton*>(ui->currentTraceCheckBox),
+             static_cast<QAbstractButton*>(ui->averageCheckBox),
+             static_cast<QAbstractButton*>(ui->markerEnableCheckBox),
+             static_cast<QAbstractButton*>(ui->markerTrackCheckBox),
+             static_cast<QAbstractButton*>(ui->markerPeakButton),
+             static_cast<QAbstractButton*>(ui->markerNextPeakButton),
+             static_cast<QAbstractButton*>(ui->saveScreenshotButton)}) {
+        textControl->setMinimumWidth(0);
+        textControl->setMaximumWidth(QWIDGETSIZE_MAX);
+        textControl->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+    }
+    applyLanguageLayout();
 
     // 所有可点击按钮使用手型光标，增强可操作性反馈。
     const auto buttons = findChildren<QAbstractButton*>();
@@ -315,41 +405,47 @@ MainWindow::MainWindow(QWidget* parent)
             qOverload<int>(&QComboBox::currentIndexChanged),
             this, [this](int) { updateDeviceControls(); });
 
-    connect(&discoveryWatcher_, &QFutureWatcher<DeviceDiscoveryResult>::finished,
+    connect(discoveryWatcher_.get(),
+            &QFutureWatcher<DeviceDiscoveryResult>::finished,
             this, [this]() {
-        const DeviceDiscoveryResult result = discoveryWatcher_.result();
+        const DeviceDiscoveryResult result = discoveryWatcher_->result();
         setDeviceOperationBusy(false);
         ui->deviceSelectComboBox->clear();
 
         if (!result.errorMessage.empty()) {
-            ui->deviceSelectComboBox->addItem(tr("设备查找失败"));
+            deviceListUiState_ = DeviceListUiState::DiscoveryFailed;
+            updateDeviceListPlaceholder();
             appendLog(tr("错误"),
                       tr("UHD 设备查找失败：%1")
                           .arg(QString::fromStdString(result.errorMessage)));
-            ui->systemStatusLabel->setText(tr("● 设备查找失败"));
+            setSystemUiState(SystemUiState::DiscoveryFailed);
             updateDeviceControls();
             return;
         }
 
         if (result.devices.empty()) {
-            ui->deviceSelectComboBox->addItem(tr("未发现设备"));
+            deviceListUiState_ = DeviceListUiState::Empty;
+            updateDeviceListPlaceholder();
             appendLog(tr("设备"), tr("未发现符合条件的 UHD 设备"));
-            ui->systemStatusLabel->setText(tr("● 未发现设备"));
+            setSystemUiState(SystemUiState::NoDevices);
             updateDeviceControls();
             return;
         }
 
         const auto deviceCount = static_cast<qulonglong>(result.devices.size());
+        deviceListUiState_ = DeviceListUiState::Ready;
         appendLog(tr("设备"), tr("发现 %1 台 UHD 设备").arg(deviceCount));
         for (std::size_t index = 0; index < result.devices.size(); ++index) {
             const auto& device = result.devices[index];
+            const QString displayName = translatedDeviceDisplayName(
+                QString::fromStdString(device.displayName));
             ui->deviceSelectComboBox->addItem(
-                QString::fromStdString(device.displayName),
+                displayName,
                 QString::fromStdString(device.connectionArgs));
             const int comboIndex = ui->deviceSelectComboBox->count() - 1;
             ui->deviceSelectComboBox->setItemData(
                 comboIndex,
-                QString::fromStdString(device.displayName) + QLatin1Char('\n')
+                displayName + QLatin1Char('\n')
                     + QString::fromStdString(device.connectionArgs),
                 Qt::ToolTipRole);
             appendLog(tr("设备"),
@@ -357,18 +453,18 @@ MainWindow::MainWindow(QWidget* parent)
                           .arg(static_cast<qulonglong>(index + 1))
                           .arg(QString::fromStdString(device.connectionArgs)));
         }
-        ui->systemStatusLabel->setText(
-            tr("● 已发现 %1 台设备").arg(deviceCount));
+        setSystemUiState(SystemUiState::DevicesFound, deviceCount);
         updateDeviceControls();
     });
 
-    connect(&connectionWatcher_, &QFutureWatcher<DeviceConnectionResult>::finished,
+    connect(connectionWatcher_.get(),
+            &QFutureWatcher<DeviceConnectionResult>::finished,
             this, [this]() {
-        const DeviceConnectionResult result = connectionWatcher_.result();
+        const DeviceConnectionResult result = connectionWatcher_->result();
         setDeviceOperationBusy(false);
 
         if (!result.success) {
-            ui->deviceConnectionStatusLabel->setText(tr("● 连接失败"));
+            setConnectionUiState(ConnectionUiState::ConnectionFailed);
             ui->deviceConnectionStatusLabel->setStyleSheet(
                 QStringLiteral("color: #ff5d68;"));
             appendLog(tr("错误"),
@@ -380,27 +476,34 @@ MainWindow::MainWindow(QWidget* parent)
         ui->deviceModelValueLabel->setText(
             QString::fromStdString(result.deviceModel));
         ui->connectionValueLabel->setText(tr("UHD"));
+        connectedInterfaceTypeSource_ = QString::fromStdString(result.interfaceType);
         ui->interfaceTypeValueLabel->setText(
-            QString::fromStdString(result.interfaceType));
+            translatedSdrValue(connectedInterfaceTypeSource_));
         ui->fpgaVersionValueLabel->setText(tr("见设备日志"));
-        ui->deviceConnectionStatusLabel->setText(tr("● 已连接"));
+        setConnectionUiState(ConnectionUiState::Connected);
         ui->deviceConnectionStatusLabel->setStyleSheet(
             QStringLiteral("color: #30dd78;"));
-        ui->systemStatusLabel->setText(tr("● UHD 设备已连接"));
+        setSystemUiState(SystemUiState::DeviceConnected);
 
         appendLog(
             tr("设备"),
             tr("UHD 设备连接成功：型号 %1，接口 %2，连接参数 %3，设备参数 %4")
                 .arg(QString::fromStdString(result.deviceModel),
-                     QString::fromStdString(result.interfaceType),
-                     QString::fromStdString(result.connectionArgsUsed),
-                     QString::fromStdString(result.deviceOptionsUsed)));
+                     translatedSdrValue(QString::fromStdString(result.interfaceType)),
+                     translatedSdrValue(QString::fromStdString(result.connectionArgsUsed)),
+                     translatedSdrValue(QString::fromStdString(result.deviceOptionsUsed))));
         appendLog(tr("设备"), QString::fromStdString(result.deviceInfo));
         updateDeviceControls();
     });
 
     setAcquisitionRunning(false);
     updateDeviceControls();
+    switchLanguage(QStringLiteral("zh_CN"));
+
+    // The splitter gets its usable width only after the first layout pass.
+    // Reapply the panel geometry once so the center plot consumes every pixel
+    // left between the two fixed side panels.
+    QTimer::singleShot(0, this, [this]() { applyMainPanelGeometry(); });
 }
 
 MainWindow::~MainWindow()
@@ -410,9 +513,358 @@ MainWindow::~MainWindow()
         rxThread_->wait();
     }
     // 防止关闭窗口时后台任务仍访问已经析构的设备对象。
-    discoveryWatcher_.waitForFinished();
-    connectionWatcher_.waitForFinished();
+    discoveryWatcher_->waitForFinished();
+    connectionWatcher_->waitForFinished();
+    if (qtTranslator_)
+        qApp->removeTranslator(qtTranslator_.get());
+    if (appTranslator_)
+        qApp->removeTranslator(appTranslator_.get());
     delete ui;
+}
+
+void MainWindow::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::LanguageChange && ui) {
+        const QList<QLabel*> dataLabels = {
+            ui->deviceModelValueLabel,
+            ui->connectionValueLabel,
+            ui->interfaceTypeValueLabel,
+            ui->fpgaVersionValueLabel,
+            ui->actualCenterValueLabel,
+            ui->actualRateValueLabel,
+            ui->actualBandwidthValueLabel,
+            ui->receiveRateValueLabel,
+            ui->receivedDataValueLabel,
+            ui->runningTimeValueLabel
+        };
+        QStringList dataLabelTexts;
+        dataLabelTexts.reserve(dataLabels.size());
+        for (const QLabel* label : dataLabels)
+            dataLabelTexts.push_back(label->text());
+
+        QStringList metadataValues;
+        // 第 9 行是可翻译的 IQ 保存状态，不保存其显示文本；语言切换后
+        // 根据语言无关的 iqSaveUiState_ 重新生成。其他行均为实时数据。
+        for (int row = 0; row < ui->metadataTableWidget->rowCount() - 1; ++row) {
+            const QTableWidgetItem* item = ui->metadataTableWidget->item(row, 1);
+            metadataValues.push_back(item ? item->text() : QStringLiteral("--"));
+        }
+
+        struct DeviceItem {
+            QString text;
+            QVariant data;
+        };
+        QList<DeviceItem> deviceItems;
+        const int selectedDevice = ui->deviceSelectComboBox->currentIndex();
+        if (deviceListUiState_ == DeviceListUiState::Ready) {
+            for (int index = 0; index < ui->deviceSelectComboBox->count(); ++index) {
+                deviceItems.push_back({
+                    ui->deviceSelectComboBox->itemText(index),
+                    ui->deviceSelectComboBox->itemData(index)
+                });
+            }
+        }
+
+        ui->retranslateUi(this);
+
+        for (int index = 0; index < dataLabels.size(); ++index) {
+            const bool isDeviceField = index < 4;
+            if (!isDeviceField || sdrDevice_->isConnected())
+                dataLabels[index]->setText(dataLabelTexts[index]);
+        }
+        for (int row = 0;
+             row < metadataValues.size() && row < ui->metadataTableWidget->rowCount();
+             ++row) {
+            if (QTableWidgetItem* item = ui->metadataTableWidget->item(row, 1))
+                item->setText(metadataValues[row]);
+        }
+        if (!deviceItems.isEmpty()) {
+            ui->deviceSelectComboBox->clear();
+            for (const DeviceItem& item : deviceItems) {
+                ui->deviceSelectComboBox->addItem(
+                    translatedDeviceDisplayName(item.text), item.data);
+                ui->deviceSelectComboBox->setItemData(
+                    ui->deviceSelectComboBox->count() - 1,
+                    translatedDeviceDisplayName(item.text) + QLatin1Char('\n')
+                        + item.data.toString(),
+                    Qt::ToolTipRole);
+            }
+            ui->deviceSelectComboBox->setCurrentIndex(selectedDevice);
+        }
+
+        retranslateDynamicUi();
+    }
+    QMainWindow::changeEvent(event);
+}
+
+void MainWindow::setupLanguageMenu()
+{
+    languageActionGroup_ = new QActionGroup(this);
+    languageActionGroup_->setExclusive(true);
+    languageActionGroup_->addAction(ui->actionLanguageChinese);
+    languageActionGroup_->addAction(ui->actionLanguageEnglish);
+    languageActionGroup_->addAction(ui->actionLanguageRussian);
+    ui->actionLanguageChinese->setChecked(true);
+
+    connect(ui->actionLanguageChinese, &QAction::triggered,
+            this, [this]() { switchLanguage(QStringLiteral("zh_CN")); });
+    connect(ui->actionLanguageEnglish, &QAction::triggered,
+            this, [this]() { switchLanguage(QStringLiteral("en")); });
+    connect(ui->actionLanguageRussian, &QAction::triggered,
+            this, [this]() { switchLanguage(QStringLiteral("ru")); });
+}
+
+void MainWindow::switchLanguage(const QString& languageCode)
+{
+    if (currentLanguageCode_ == languageCode)
+        return;
+
+    const QString resourcePath = QStringLiteral(":/i18n/signal_capture_app_%1.qm")
+        .arg(languageCode);
+    auto nextTranslator = std::make_unique<QTranslator>();
+    if (!nextTranslator->load(resourcePath))
+        return;
+
+    auto nextQtTranslator = std::make_unique<QTranslator>();
+    const bool hasQtTranslation = languageCode != QStringLiteral("en")
+        && nextQtTranslator->load(
+            QStringLiteral("qtbase_%1").arg(languageCode),
+            QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+
+    if (qtTranslator_)
+        qApp->removeTranslator(qtTranslator_.get());
+    if (appTranslator_)
+        qApp->removeTranslator(appTranslator_.get());
+    appTranslator_ = std::move(nextTranslator);
+    if (hasQtTranslation)
+        qtTranslator_ = std::move(nextQtTranslator);
+    else
+        qtTranslator_.reset();
+    currentLanguageCode_ = languageCode;
+    qApp->installTranslator(appTranslator_.get());
+    if (qtTranslator_)
+        qApp->installTranslator(qtTranslator_.get());
+}
+
+void MainWindow::retranslateDynamicUi()
+{
+    setWindowTitle(tr("LuoWave Signal Capture"));
+    retranslateMetadataView();
+    updateIqSaveStatus();
+    updateDeviceListPlaceholder();
+    setSystemUiState(systemUiState_, discoveredDeviceCount_);
+    setConnectionUiState(connectionUiState_);
+    if (sdrDevice_->isConnected()) {
+        ui->interfaceTypeValueLabel->setText(
+            translatedSdrValue(connectedInterfaceTypeSource_));
+        ui->fpgaVersionValueLabel->setText(tr("见设备日志"));
+    }
+    updatePerformanceLabel();
+    updateDiskCapacity();
+
+    ui->actionLanguageChinese->setChecked(currentLanguageCode_ == QStringLiteral("zh_CN"));
+    ui->actionLanguageEnglish->setChecked(currentLanguageCode_ == QStringLiteral("en"));
+    ui->actionLanguageRussian->setChecked(currentLanguageCode_ == QStringLiteral("ru"));
+
+    applyLanguageLayout();
+
+    if (spectrumWidget_) spectrumWidget_->update();
+    if (waterfallWidget_) waterfallWidget_->update();
+    if (waveformWidget_) waveformWidget_->update();
+}
+
+void MainWindow::applyLanguageLayout()
+{
+    // 译文改变后让顶部文字控件重新提交 sizeHint，保持原有两行布局，
+    // 但不再按中文版字符数裁切英文或俄文。
+    for (QWidget* widget : {
+             static_cast<QWidget*>(ui->labelFftSize),
+             static_cast<QWidget*>(ui->labelWindowFunction),
+             static_cast<QWidget*>(ui->labelReferenceLevel),
+             static_cast<QWidget*>(ui->labelInputCompensation),
+             static_cast<QWidget*>(ui->labelWaterfallRange),
+             static_cast<QWidget*>(ui->labelMarker),
+             static_cast<QWidget*>(ui->markerTraceLabel),
+             static_cast<QWidget*>(ui->maxHoldCheckBox),
+             static_cast<QWidget*>(ui->minHoldCheckBox),
+             static_cast<QWidget*>(ui->currentTraceCheckBox),
+             static_cast<QWidget*>(ui->averageCheckBox),
+             static_cast<QWidget*>(ui->markerEnableCheckBox),
+             static_cast<QWidget*>(ui->markerTrackCheckBox),
+             static_cast<QWidget*>(ui->markerPeakButton),
+             static_cast<QWidget*>(ui->markerNextPeakButton),
+             static_cast<QWidget*>(ui->saveScreenshotButton),
+             static_cast<QWidget*>(ui->windowFunctionComboBox),
+             static_cast<QWidget*>(ui->markerTraceComboBox)}) {
+        widget->updateGeometry();
+    }
+
+    // 右侧区域保持原宽度，由内部组件适应视口，而不是把滚动区域撑宽。
+    for (QGroupBox* group : {ui->acquisitionInfoGroupBox,
+                             ui->metadataGroupBox,
+                             ui->logGroupBox}) {
+        group->setMinimumWidth(0);
+        group->setMaximumWidth(QWIDGETSIZE_MAX);
+        group->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    }
+    ui->rightScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    applyMainPanelGeometry();
+
+    // 俄文“Устройство”比中文标签更宽；仅收紧组合框本体，弹出列表仍保持
+    // 300 px，可完整显示型号、序列号和连接参数。
+    const int deviceComboWidth =
+        currentLanguageCode_ == QStringLiteral("ru") ? 135 : 150;
+    ui->deviceSelectComboBox->setMinimumWidth(deviceComboWidth);
+    ui->deviceSelectComboBox->setMaximumWidth(deviceComboWidth);
+    ui->findDevicesButton->setToolTip(tr("查找并列出可用的 UHD 设备"));
+    ui->connectDeviceButton->setToolTip(tr("连接当前选中的设备"));
+    ui->disconnectDeviceButton->setToolTip(tr("断开当前已连接的设备"));
+
+    // 元数据列宽由界面宽度控制。俄文项目名稍长，因此给第一列更多空间；
+    // 第二列始终占用余下宽度，表格内部不出现横向或纵向滚动条。
+    QTableWidget* table = ui->metadataTableWidget;
+    table->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    table->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    table->setWordWrap(false);
+    QHeaderView* header = table->horizontalHeader();
+    header->setMinimumSectionSize(36);
+    header->setSectionResizeMode(0, QHeaderView::Fixed);
+    header->resizeSection(0,
+        currentLanguageCode_ == QStringLiteral("ru") ? 118
+        : currentLanguageCode_ == QStringLiteral("en") ? 108 : 86);
+    header->setSectionResizeMode(1, QHeaderView::Stretch);
+
+    // 日志行在固定右侧宽度内自动换行，不产生横向滚动条。
+    ui->logPlainTextEdit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+    ui->logPlainTextEdit->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+}
+
+void MainWindow::applyMainPanelGeometry()
+{
+    constexpr int leftPanelWidth = 255;
+    const int rightPanelWidth =
+        currentLanguageCode_ == QStringLiteral("ru") ? 275
+        : currentLanguageCode_ == QStringLiteral("en") ? 260 : 245;
+
+    // Side panels use deliberate language-specific widths. The center panel
+    // and its tab widget are the only horizontally expanding items, preventing
+    // the unused strip that appeared beside the plots in Chinese mode.
+    ui->leftScrollArea->setMinimumWidth(leftPanelWidth);
+    ui->leftScrollArea->setMaximumWidth(leftPanelWidth);
+    ui->leftScrollArea->setSizePolicy(
+        QSizePolicy::Fixed, QSizePolicy::Expanding);
+
+    ui->rightScrollArea->setMinimumWidth(rightPanelWidth);
+    ui->rightScrollArea->setMaximumWidth(rightPanelWidth);
+    ui->rightScrollArea->setSizePolicy(
+        QSizePolicy::Fixed, QSizePolicy::Expanding);
+
+    ui->centerPanel->setSizePolicy(
+        QSizePolicy::Expanding, QSizePolicy::Expanding);
+    ui->displayTabWidget->setSizePolicy(
+        QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    const int centerWidth = std::max(
+        ui->centerPanel->minimumWidth(),
+        ui->mainSplitter->contentsRect().width()
+            - leftPanelWidth - rightPanelWidth);
+    ui->mainSplitter->setSizes(
+        {leftPanelWidth, centerWidth, rightPanelWidth});
+}
+
+void MainWindow::updateDeviceListPlaceholder()
+{
+    QString text;
+    switch (deviceListUiState_) {
+    case DeviceListUiState::Initial:
+        text = tr("请先点击查找设备");
+        break;
+    case DeviceListUiState::Searching:
+        text = tr("正在查找设备...");
+        break;
+    case DeviceListUiState::DiscoveryFailed:
+        text = tr("设备查找失败");
+        break;
+    case DeviceListUiState::Empty:
+        text = tr("未发现设备");
+        break;
+    case DeviceListUiState::Ready:
+        return;
+    }
+    ui->deviceSelectComboBox->clear();
+    ui->deviceSelectComboBox->addItem(text);
+}
+
+void MainWindow::setSystemUiState(SystemUiState state, qulonglong deviceCount)
+{
+    systemUiState_ = state;
+    if (state == SystemUiState::DevicesFound)
+        discoveredDeviceCount_ = deviceCount;
+
+    switch (state) {
+    case SystemUiState::Normal:
+        ui->systemStatusLabel->setText(tr("● 系统运行正常"));
+        break;
+    case SystemUiState::SearchingDevices:
+        ui->systemStatusLabel->setText(tr("● 正在查找设备..."));
+        break;
+    case SystemUiState::DiscoveryFailed:
+        ui->systemStatusLabel->setText(tr("● 设备查找失败"));
+        break;
+    case SystemUiState::NoDevices:
+        ui->systemStatusLabel->setText(tr("● 未发现设备"));
+        break;
+    case SystemUiState::DevicesFound:
+        ui->systemStatusLabel->setText(
+            tr("● 已发现 %1 台设备").arg(discoveredDeviceCount_));
+        break;
+    case SystemUiState::DeviceConnected:
+        ui->systemStatusLabel->setText(tr("● UHD 设备已连接"));
+        break;
+    case SystemUiState::ConfiguringReception:
+        ui->systemStatusLabel->setText(tr("● 正在配置接收参数..."));
+        break;
+    case SystemUiState::Receiving:
+        ui->systemStatusLabel->setText(tr("● 正在接收 IQ 数据"));
+        break;
+    case SystemUiState::StoppingReception:
+        ui->systemStatusLabel->setText(tr("● 正在停止接收..."));
+        break;
+    case SystemUiState::ReceptionFailed:
+        ui->systemStatusLabel->setText(tr("● 接收失败"));
+        break;
+    case SystemUiState::AcquisitionFailed:
+        ui->systemStatusLabel->setText(tr("● 采集异常停止"));
+        break;
+    case SystemUiState::TimedAcquisitionCompleted:
+        ui->systemStatusLabel->setText(tr("● 定长采集已完成"));
+        break;
+    case SystemUiState::ReceptionStopped:
+        ui->systemStatusLabel->setText(tr("● 接收已经停止"));
+        break;
+    case SystemUiState::DeviceDisconnected:
+        ui->systemStatusLabel->setText(tr("● UHD 设备已断开"));
+        break;
+    }
+}
+
+void MainWindow::setConnectionUiState(ConnectionUiState state)
+{
+    connectionUiState_ = state;
+    switch (state) {
+    case ConnectionUiState::Disconnected:
+        ui->deviceConnectionStatusLabel->setText(tr("● 未连接"));
+        break;
+    case ConnectionUiState::Connecting:
+        ui->deviceConnectionStatusLabel->setText(tr("● 正在连接"));
+        break;
+    case ConnectionUiState::ConnectionFailed:
+        ui->deviceConnectionStatusLabel->setText(tr("● 连接失败"));
+        break;
+    case ConnectionUiState::Connected:
+        ui->deviceConnectionStatusLabel->setText(tr("● 已连接"));
+        break;
+    }
 }
 
 void MainWindow::startReceiving()
@@ -484,7 +936,7 @@ void MainWindow::startReceiving()
             this, [this](const QString& message) {
         acquisitionFailed_ = true;
         appendLog(tr("错误"), message);
-        ui->systemStatusLabel->setText(tr("● 接收失败"));
+        setSystemUiState(SystemUiState::ReceptionFailed);
         ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ff5d68;"));
     });
     connect(rxWorker_, &RxWorker::actualParameters,
@@ -498,7 +950,7 @@ void MainWindow::startReceiving()
     });
     connect(rxWorker_, &RxWorker::receptionStarted,
             this, [this]() {
-        ui->systemStatusLabel->setText(tr("● 正在接收 IQ 数据"));
+        setSystemUiState(SystemUiState::Receiving);
         ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#30dd78;"));
         appendLog(tr("接收"),
                   activeAcquisitionTimed_ ? tr("定长接收已经启动")
@@ -533,8 +985,10 @@ void MainWindow::startReceiving()
     });
     connect(rxWorker_, &RxWorker::iqSaveCompleted,
             this, [this](const QString& path, quint64 samples, quint64 bytes) {
-        ui->metadataTableWidget->item(9, 1)->setText(
-            tr("完成 · %1 MiB").arg(double(bytes) / (1024.0 * 1024.0), 0, 'f', 2));
+        iqSaveUiState_ = IqSaveUiState::Completed;
+        iqSaveFileName_ = QFileInfo(path).fileName();
+        iqSaveCompletedMiB_ = double(bytes) / (1024.0 * 1024.0);
+        updateIqSaveStatus();
         appendLog(tr("保存"),
                   tr("IQ 文件写入完成：%1（%2 个 fc32 样本，%3 MiB）")
                       .arg(QDir::toNativeSeparators(path))
@@ -542,18 +996,23 @@ void MainWindow::startReceiving()
                       .arg(double(bytes) / (1024.0 * 1024.0), 0, 'f', 2));
         updateDiskCapacity();
     });
+    // Capture a guarded worker pointer so the GUI can acknowledge the frame
+    // without dereferencing a worker that has already been deleted.
+    const QPointer<RxWorker> displayWorker(rxWorker_);
     connect(rxWorker_, &RxWorker::displayFrameReady,
-            this, [this](const QVector<float>& i,
-                         const QVector<float>& current,
-                         const QVector<float>& average,
-                         const QVector<float>& maxHold,
-                         const QVector<float>& minHold,
-                         double rate, double frequency) {
+            this, [this, displayWorker](const QVector<float>& i,
+                                       const QVector<float>& current,
+                                       const QVector<float>& average,
+                                       const QVector<float>& maxHold,
+                                       const QVector<float>& minHold,
+                                       double rate, double frequency) {
         ++displayFrameCount_;
         waveformWidget_->setSamples(i, rate);
         spectrumWidget_->setSpectrum(current, average, maxHold, minHold,
                                      rate, frequency);
-        waterfallWidget_->appendSpectrum(current);
+        waterfallWidget_->appendSpectrum(current, rate, frequency);
+        if (displayWorker)
+            displayWorker->acknowledgeDisplayFrame();
     });
     connect(rxWorker_, &RxWorker::receptionStopped,
             rxThread_, &QThread::quit);
@@ -574,10 +1033,15 @@ void MainWindow::startReceiving()
     ui->metadataTableWidget->item(7, 1)->setText(
         QString::number(static_cast<qulonglong>(config.channel)));
     ui->metadataTableWidget->item(8, 1)->setText(QStringLiteral("fc32 / sc16"));
-    ui->metadataTableWidget->item(9, 1)->setText(
-        config.saveIq ? tr("正在写入 %1").arg(QFileInfo(config.iqFilePath).fileName())
-                      : tr("未保存"));
-    ui->systemStatusLabel->setText(tr("● 正在配置接收参数..."));
+    iqSaveUiState_ = config.saveIq
+        ? IqSaveUiState::Writing
+        : IqSaveUiState::NotSaving;
+    iqSaveFileName_ = config.saveIq
+        ? QFileInfo(config.iqFilePath).fileName()
+        : QString();
+    iqSaveCompletedMiB_ = 0.0;
+    updateIqSaveStatus();
+    setSystemUiState(SystemUiState::ConfiguringReception);
     ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ffba4a;"));
     appendLog(tr("参数"),
               tr("Center=%1 MHz, Rate=%2 MSps, BW=%3 MHz, Gain=%4 dB, "
@@ -607,7 +1071,7 @@ void MainWindow::stopReceiving()
     if (!acquisitionRunning_ || !rxWorker_) {
         return;
     }
-    ui->systemStatusLabel->setText(tr("● 正在停止接收..."));
+    setSystemUiState(SystemUiState::StoppingReception);
     ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ffba4a;"));
     rxWorker_->requestStop(); // 原子操作，可从 GUI 线程安全调用。
     stopRequestedByUser_ = true;
@@ -626,12 +1090,13 @@ void MainWindow::finishReceiving()
     const bool completed = activeAcquisitionTimed_ && !stopRequestedByUser_
         && !acquisitionFailed_;
     if (acquisitionFailed_) {
-        ui->systemStatusLabel->setText(tr("● 采集异常停止"));
+        setSystemUiState(SystemUiState::AcquisitionFailed);
         ui->systemStatusLabel->setStyleSheet(QStringLiteral("color:#ff5d68;"));
         appendLog(tr("接收"), tr("采集因错误停止，请检查上方错误日志"));
     } else {
-        ui->systemStatusLabel->setText(
-            completed ? tr("● 定长采集已完成") : tr("● 接收已经停止"));
+        setSystemUiState(completed
+            ? SystemUiState::TimedAcquisitionCompleted
+            : SystemUiState::ReceptionStopped);
         ui->systemStatusLabel->setStyleSheet(
             completed ? QStringLiteral("color:#30dd78;")
                       : QStringLiteral("color:#ff5d68;"));
@@ -651,12 +1116,12 @@ void MainWindow::findDevices()
     }
 
     setDeviceOperationBusy(true);
-    ui->deviceSelectComboBox->clear();
-    ui->deviceSelectComboBox->addItem(tr("正在查找设备..."));
-    ui->systemStatusLabel->setText(tr("● 正在查找设备..."));
+    deviceListUiState_ = DeviceListUiState::Searching;
+    updateDeviceListPlaceholder();
+    setSystemUiState(SystemUiState::SearchingDevices);
     appendLog(tr("设备"), tr("开始查找 UHD 设备"));
 
-    discoveryWatcher_.setFuture(QtConcurrent::run(
+    discoveryWatcher_->setFuture(QtConcurrent::run(
         [device = sdrDevice_.get()]() {
             return device->findDevices();
         }));
@@ -679,7 +1144,7 @@ void MainWindow::connectDevice()
 
     setDeviceOperationBusy(true);
 
-    ui->deviceConnectionStatusLabel->setText(tr("● 正在连接"));
+    setConnectionUiState(ConnectionUiState::Connecting);
     ui->deviceConnectionStatusLabel->setStyleSheet(
         QStringLiteral("color: #ffba4a;"));
 
@@ -691,7 +1156,7 @@ void MainWindow::connectDevice()
     if (!deviceOptions.isEmpty())
         appendLog(tr("设备"), tr("UHD 初始化设备参数：%1").arg(deviceOptions));
 
-    connectionWatcher_.setFuture(QtConcurrent::run(
+    connectionWatcher_->setFuture(QtConcurrent::run(
         [device = sdrDevice_.get(), connection = connectionArgs.toStdString(),
          options = deviceOptions.toStdString()]() {
             return device->connectDevice(connection, options);
@@ -724,17 +1189,18 @@ void MainWindow::disconnectDevice()
     }
 
     sdrDevice_->disconnectDevice();
+    connectedInterfaceTypeSource_.clear();
 
     ui->deviceModelValueLabel->setText(tr("未知"));
     ui->connectionValueLabel->setText(tr("未连接"));
     ui->interfaceTypeValueLabel->setText(tr("--"));
     ui->fpgaVersionValueLabel->setText(tr("--"));
 
-    ui->deviceConnectionStatusLabel->setText(tr("● 未连接"));
+    setConnectionUiState(ConnectionUiState::Disconnected);
     ui->deviceConnectionStatusLabel->setStyleSheet(
         QStringLiteral("color: #ffba4a;"));
 
-    ui->systemStatusLabel->setText(tr("● UHD 设备已断开"));
+    setSystemUiState(SystemUiState::DeviceDisconnected);
 
     appendLog(tr("设备"), tr("UHD 设备已断开"));
     updateDeviceControls();
@@ -807,7 +1273,7 @@ RxConfig MainWindow::currentRxConfig() const
         ? config.sampleRate : ui->bandwidthSpinBox->value() * 1e6;
     config.gainDb = ui->gainSpinBox->value();
     config.fftSize = ui->fftSizeComboBox->currentText().toInt();
-    config.window = selectedWindow(ui->windowFunctionComboBox->currentText());
+    config.window = selectedWindow(ui->windowFunctionComboBox->currentIndex());
     config.averageEnabled = ui->averageCheckBox->isChecked();
     config.averageCount = ui->averageCountSpinBox->value();
     config.maxHoldEnabled = ui->maxHoldCheckBox->isChecked();
@@ -840,23 +1306,29 @@ void MainWindow::updatePerformanceStatus()
         : -1.0;
     const quint64 frames = displayFrameCount_ - previousDisplayFrameCount_;
     previousDisplayFrameCount_ = displayFrameCount_;
-    performanceLabel_->setText(cpu >= 0.0
-        ? tr("CPU %1%  |  Display %2 FPS").arg(cpu, 0, 'f', 1).arg(frames)
-        : tr("CPU N/A  |  Display %1 FPS").arg(frames));
+    lastCpuUsage_ = cpu;
+    lastDisplayFps_ = frames;
+    updatePerformanceLabel();
     updateDiskCapacity();
+}
+
+void MainWindow::updatePerformanceLabel()
+{
+    performanceLabel_->setText(lastCpuUsage_ >= 0.0
+        ? tr("CPU %1%  |  Display %2 FPS")
+              .arg(lastCpuUsage_, 0, 'f', 1).arg(lastDisplayFps_)
+        : tr("CPU N/A  |  Display %1 FPS").arg(lastDisplayFps_));
 }
 
 void MainWindow::setupMetadataView()
 {
     QTableWidget* table = ui->metadataTableWidget;
-    table->clear();
+    // 保留 .ui 创建的表头对象；语言切换时 retranslateUi() 仍会访问它们。
+    table->clearContents();
     table->setRowCount(10);
     table->setColumnCount(2);
-    table->setHorizontalHeaderLabels({tr("项目"), tr("实时值")});
     table->verticalHeader()->hide();
     table->horizontalHeader()->setStretchLastSection(true);
-    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table->setSelectionMode(QAbstractItemView::NoSelection);
     table->setFocusPolicy(Qt::NoFocus);
@@ -865,18 +1337,48 @@ void MainWindow::setupMetadataView()
     table->verticalHeader()->setDefaultSectionSize(27);
     table->setMinimumHeight(310);
 
-    const QStringList names = {
-        tr("主机时间"), tr("设备时间"), tr("接收包数"), tr("样本总数"),
-        tr("UHD 状态"), tr("溢出次数"), tr("超时次数"), tr("接收通道"),
-        tr("数据格式"), tr("IQ 保存")
-    };
-    for (int row = 0; row < names.size(); ++row) {
-        auto* name = new QTableWidgetItem(names[row]);
+    for (int row = 0; row < table->rowCount(); ++row) {
+        auto* name = new QTableWidgetItem;
         name->setForeground(QColor(QStringLiteral("#91a4bf")));
         auto* value = new QTableWidgetItem(QStringLiteral("--"));
         value->setForeground(QColor(QStringLiteral("#e8eef7")));
         table->setItem(row, 0, name);
         table->setItem(row, 1, value);
+    }
+    retranslateMetadataView();
+}
+
+void MainWindow::retranslateMetadataView()
+{
+    QTableWidget* table = ui->metadataTableWidget;
+    table->setHorizontalHeaderLabels({tr("项目"), tr("实时值")});
+    const QStringList names = {
+        tr("主机时间"), tr("设备时间"), tr("接收包数"), tr("样本总数"),
+        tr("UHD 状态"), tr("溢出次数"), tr("超时次数"), tr("接收通道"),
+        tr("数据格式"), tr("IQ 保存")
+    };
+    for (int row = 0; row < names.size() && row < table->rowCount(); ++row) {
+        if (QTableWidgetItem* item = table->item(row, 0))
+            item->setText(names[row]);
+    }
+}
+
+void MainWindow::updateIqSaveStatus()
+{
+    QTableWidgetItem* item = ui->metadataTableWidget->item(9, 1);
+    if (!item)
+        return;
+
+    switch (iqSaveUiState_) {
+    case IqSaveUiState::NotSaving:
+        item->setText(tr("未保存"));
+        break;
+    case IqSaveUiState::Writing:
+        item->setText(tr("正在写入 %1").arg(iqSaveFileName_));
+        break;
+    case IqSaveUiState::Completed:
+        item->setText(tr("完成 · %1 MiB").arg(iqSaveCompletedMiB_, 0, 'f', 2));
+        break;
     }
 }
 

@@ -31,7 +31,7 @@ std::string discoveredDeviceName(const uhd::device_addr_t& device)
     const std::string resource = value("resource");
 
     std::string name = product.empty() ? type : product;
-    if (name.empty()) name = "UHD Device";
+    if (name.empty()) name = "UHD 设备";
     if (!serial.empty()) name += "  |  SN: " + serial;
     if (!resource.empty()) name += "  |  " + resource;
     else if (!address.empty()) name += "  |  " + address;

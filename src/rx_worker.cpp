@@ -5,6 +5,7 @@
 #include <uhd/types/metadata.hpp>
 #include <uhd/types/stream_cmd.hpp>
 #include <uhd/types/tune_request.hpp>
+#include <uhd/usrp/multi_usrp.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -16,7 +17,13 @@
 #include <utility>
 #include <vector>
 
-RxWorker::RxWorker(uhd::usrp::multi_usrp::sptr usrp, RxConfig config,
+namespace {
+constexpr auto kDisplayPeriod = std::chrono::milliseconds(33);   // ~30 FPS
+constexpr auto kStatisticsPeriod = std::chrono::milliseconds(250);
+constexpr double kReceiveTimeoutSeconds = 0.10;
+}
+
+RxWorker::RxWorker(std::shared_ptr<uhd::usrp::multi_usrp> usrp, RxConfig config,
                    QObject* parent)
     : QObject(parent), usrp_(std::move(usrp)), config_(std::move(config)),
       pendingConfig_(config_)
@@ -26,6 +33,7 @@ RxWorker::RxWorker(uhd::usrp::multi_usrp::sptr usrp, RxConfig config,
 void RxWorker::startReceiving()
 {
     stopRequested_.store(false);
+    displayFramePending_.store(false);
     spectrumProcessor_.reset();
     if (!usrp_) {
         emit errorOccurred(tr("没有可用的 UHD 设备对象"));
@@ -178,7 +186,8 @@ void RxWorker::startReceiving()
                       buffer.size(), targetSamples - totalSamples))
                 : buffer.size();
             const std::size_t received = streamer->recv(
-                buffer.data(), requestedSamples, metadata, 0.10, false);
+                buffer.data(), requestedSamples, metadata,
+                kReceiveTimeoutSeconds, false);
 
             if (metadata.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT) {
                 ++timeoutCount;
@@ -206,9 +215,11 @@ void RxWorker::startReceiving()
                     throw std::runtime_error(error.toUtf8().constData());
             }
 
-            // 目标约 50 FPS。绘图层还会按像素宽度压缩点数，避免大 FFT
-            // 让 GUI 绘制数万条肉眼不可分辨的线段。
-            if (received > 0 && now - lastPreviewTime >= std::chrono::milliseconds(20)) {
+            // 显示约 30 FPS，并且队列里最多保留一帧。GUI 短暂繁忙时跳过
+            // 预览计算而不是堆积旧帧；UHD 接收和 IQ 写盘始终继续。
+            if (received > 0
+                && !displayFramePending_.load()
+                && now - lastPreviewTime >= kDisplayPeriod) {
                 // UHD 单次 recv() 可能少于 FFT 点数，因此跨接收包凑齐一帧。
                 for (std::size_t index = 0;
                      index < received && fftI.size() < config_.fftSize; ++index) {
@@ -216,21 +227,24 @@ void RxWorker::startReceiving()
                     fftQ.push_back(buffer[index].imag());
                 }
                 if (fftI.size() == config_.fftSize) {
-                    const SpectrumFrame frame = spectrumProcessor_.process(
-                        fftI, fftQ, config_.fftSize, config_.window,
-                        config_.averageEnabled, config_.averageCount,
-                        config_.maxHoldEnabled, config_.minHoldEnabled,
-                        static_cast<float>(config_.inputCompensationDb));
-                    emit displayFrameReady(fftI, frame.currentDb, frame.averageDb,
-                                           frame.maxHoldDb, frame.minHoldDb,
-                                           actualRate, actualFrequency);
+                    if (!displayFramePending_.exchange(true)) {
+                        const SpectrumFrame frame = spectrumProcessor_.process(
+                            fftI, fftQ, config_.fftSize, config_.window,
+                            config_.averageEnabled, config_.averageCount,
+                            config_.maxHoldEnabled, config_.minHoldEnabled,
+                            static_cast<float>(config_.inputCompensationDb));
+                        emit displayFrameReady(
+                            fftI, frame.currentDb, frame.averageDb,
+                            frame.maxHoldDb, frame.minHoldDb,
+                            actualRate, actualFrequency);
+                    }
                     fftI.clear();
                     fftQ.clear();
                     lastPreviewTime = now;
                 }
             }
 
-            if (now - lastStatisticsTime >= std::chrono::milliseconds(250)) {
+            if (now - lastStatisticsTime >= kStatisticsPeriod) {
                 const double seconds =
                     std::chrono::duration<double>(now - lastStatisticsTime).count();
                 const double rate =
@@ -288,6 +302,11 @@ void RxWorker::startReceiving()
 void RxWorker::requestStop()
 {
     stopRequested_.store(true);
+}
+
+void RxWorker::acknowledgeDisplayFrame()
+{
+    displayFramePending_.store(false);
 }
 
 void RxWorker::requestRuntimeConfig(const RxConfig& config)

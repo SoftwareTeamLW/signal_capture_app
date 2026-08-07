@@ -6,4 +6,12 @@
         <file>luowave_icon_48x48.ico</file>
         <file>luowave_icon_256x256.ico</file>
     </qresource>
+    <qresource prefix="/branding">
+        <!--
+          The executable-side assets file remains the preferred, replaceable
+          logo. This copy is a guaranteed fallback when the assets directory
+          has not yet been deployed next to the executable.
+        -->
+        <file alias="company_logo.png">../assets/company_logo.png</file>
+    </qresource>
 </RCC>

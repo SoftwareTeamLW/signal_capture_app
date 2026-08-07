@@ -188,7 +188,7 @@ QDoubleSpinBox:focus {
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>254</width>
+          <width>252</width>
           <height>954</height>
          </rect>
         </property>
@@ -223,10 +223,15 @@ QDoubleSpinBox:focus {
             </size>
            </property>
            <property name="styleSheet">
-            <string notr="true">background:#111722;border:1px dashed #4b5b70;border-radius:7px;color:#8291a6;</string>
+            <string notr="true">background:#111722;border:1px dashed #4b5b70;border-radius:7px;color:#8291a6;
+QLabel {
+    background-image: url(:/assets/company_logo.png);
+    background-position: center;
+    background-repeat: no-repeat;
+}</string>
            </property>
            <property name="text">
-            <string>COMPANY LOGO</string>
+            <string/>
            </property>
            <property name="scaledContents">
             <bool>false</bool>
@@ -271,15 +276,21 @@ QDoubleSpinBox:focus {
             </item>
             <item row="7" column="1">
              <widget class="QComboBox" name="deviceSelectComboBox">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="minimumSize">
                <size>
-                <width>150</width>
+                <width>120</width>
                 <height>26</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>150</width>
+                <width>140</width>
                 <height>16777215</height>
                </size>
               </property>
@@ -863,7 +874,7 @@ QDoubleSpinBox:focus {
         <item>
          <widget class="QTabWidget" name="displayTabWidget">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
@@ -1677,7 +1688,7 @@ QDoubleSpinBox:focus {
                <property name="minimumSize">
                 <size>
                  <width>0</width>
-                 <height>250</height>
+                 <height>230</height>
                 </size>
                </property>
                <property name="frameShape">
@@ -1687,6 +1698,18 @@ QDoubleSpinBox:focus {
                 <bool>true</bool>
                </property>
                <layout class="QVBoxLayout" name="spectrumPlaceholderLayout">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
                 <item>
                  <widget class="QLabel" name="spectrumPlaceholderLabel">
                   <property name="text">
@@ -1716,28 +1739,18 @@ QDoubleSpinBox:focus {
                 <bool>true</bool>
                </property>
                <layout class="QHBoxLayout" name="waterfallPlaceholderLayout">
-                <item>
-                 <widget class="QFrame" name="colorScalePlaceholder">
-                  <property name="minimumSize">
-                   <size>
-                    <width>10</width>
-                    <height>0</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>5</width>
-                    <height>16777215</height>
-                   </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background:qlineargradient(x1:0,y1:1,x2:0,y2:0, stop:0 #091dff, stop:0.35 #00d8ff, stop:0.58 #21ed45, stop:0.78 #ffe300, stop:1 #ff1b00); border:1px solid #728096;</string>
-                  </property>
-                  <property name="frameShape">
-                   <enum>QFrame::Shape::StyledPanel</enum>
-                  </property>
-                 </widget>
-                </item>
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
                 <item>
                  <widget class="QLabel" name="waterfallPlaceholderLabel">
                   <property name="text">
@@ -1757,7 +1770,7 @@ QDoubleSpinBox:focus {
                <property name="minimumSize">
                 <size>
                  <width>0</width>
-                 <height>150</height>
+                 <height>100</height>
                 </size>
                </property>
                <property name="frameShape">
@@ -1767,6 +1780,18 @@ QDoubleSpinBox:focus {
                 <bool>true</bool>
                </property>
                <layout class="QVBoxLayout" name="timeDomainPlaceholderLayout">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
                 <item>
                  <widget class="QLabel" name="timeDomainPlaceholderLabel">
                   <property name="text">
@@ -1850,7 +1875,7 @@ QDoubleSpinBox:focus {
        </property>
        <property name="maximumSize">
         <size>
-         <width>245</width>
+         <width>16777215</width>
          <height>16777215</height>
         </size>
        </property>
@@ -2001,6 +2026,12 @@ QDoubleSpinBox:focus {
          </item>
          <item>
           <widget class="QGroupBox" name="metadataGroupBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
              <width>240</width>
@@ -2009,7 +2040,7 @@ QDoubleSpinBox:focus {
            </property>
            <property name="maximumSize">
             <size>
-             <width>240</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -2086,7 +2117,7 @@ QDoubleSpinBox:focus {
          <item>
           <widget class="QGroupBox" name="logGroupBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -2099,7 +2130,7 @@ QDoubleSpinBox:focus {
            </property>
            <property name="maximumSize">
             <size>
-             <width>240</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -2109,6 +2140,23 @@ QDoubleSpinBox:focus {
            <layout class="QVBoxLayout" name="logLayout">
             <item>
              <widget class="QPlainTextEdit" name="logPlainTextEdit">
+              <property name="styleSheet">
+               <string notr="true">QScrollBar:vertical {
+    background: #151c28;
+    width: 11px;
+    border: none;
+}
+
+QScrollBar::handle:vertical {
+    background: #4b5b75;
+    min-height: 30px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #6f84a5;
+}</string>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -2196,6 +2244,14 @@ QDoubleSpinBox:focus {
     </property>
     <addaction name="actionSettings"/>
    </widget>
+   <widget class="QMenu" name="menuLanguage">
+    <property name="title">
+     <string>语言</string>
+    </property>
+    <addaction name="actionLanguageChinese"/>
+    <addaction name="actionLanguageEnglish"/>
+    <addaction name="actionLanguageRussian"/>
+   </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>帮助</string>
@@ -2205,6 +2261,7 @@ QDoubleSpinBox:focus {
    <addaction name="menuDevice"/>
    <addaction name="menuView"/>
    <addaction name="menuTools"/>
+   <addaction name="menuLanguage"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
@@ -2304,6 +2361,30 @@ QDoubleSpinBox:focus {
   <action name="actionAbout">
    <property name="text">
     <string>关于</string>
+   </property>
+  </action>
+  <action name="actionLanguageChinese">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>中文</string>
+   </property>
+  </action>
+  <action name="actionLanguageEnglish">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>英语</string>
+   </property>
+  </action>
+  <action name="actionLanguageRussian">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>俄语</string>
    </property>
   </action>
  </widget>
